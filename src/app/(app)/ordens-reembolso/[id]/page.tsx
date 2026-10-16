@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
@@ -13,6 +14,11 @@ import { ReembolsoForm, type ItemReembolso } from "../reembolso-form";
 import { AcoesReembolso } from "../acoes";
 
 type Item = { id: number; ordem: number; descricao: string; apropriacao: string | null; tipo: string | null; data: string | null; valor: number };
+
+export async function generateMetadata({ params }: PageProps<"/ordens-reembolso/[id]">): Promise<Metadata> {
+  const id = Number((await params).id);
+  return { title: Number.isInteger(id) ? numeroReembolso(id) : "Não encontrado" };
+}
 
 export default async function ReembolsoPage({ params }: PageProps<"/ordens-reembolso/[id]">) {
   const id = Number((await params).id);

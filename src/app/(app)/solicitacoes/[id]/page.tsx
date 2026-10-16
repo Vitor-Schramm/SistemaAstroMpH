@@ -1,9 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { catalogoItens, opcoesObras } from "@/lib/compras/dados";
 import { getPerfil, podeComprar } from "@/lib/auth";
-import type { LinhaItem } from "@/lib/compras/tipos";
+import { numeroSolicitacao, type LinhaItem } from "@/lib/compras/tipos";
 import { SolicitacaoForm } from "../solicitacao-form";
+
+export async function generateMetadata({ params }: PageProps<"/solicitacoes/[id]">): Promise<Metadata> {
+  const id = Number((await params).id);
+  return { title: Number.isInteger(id) ? numeroSolicitacao(id) : "Não encontrado" };
+}
 
 export default async function SolicitacaoPage({ params }: PageProps<"/solicitacoes/[id]">) {
   const id = Number((await params).id);

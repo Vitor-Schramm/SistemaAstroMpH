@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { traduzirErro } from "@/lib/erros";
 
 export type Resultado = { ok: true; id?: number; ids?: number[] } | { ok: false; erro: string };
 
@@ -11,7 +12,7 @@ async function rpc(fn: string, args: Json): Promise<{ data: unknown; erro?: stri
   const supabase = await createClient();
   const { data, error } = await supabase.rpc(fn, args);
   if (error) {
-    const msg = error.code === "42501" ? error.message || "Sem permissão." : error.message;
+    const msg = traduzirErro(error.code === "42501" ? error.message || "Sem permissão." : error.message);
     return { data: null, erro: msg };
   }
   return { data };

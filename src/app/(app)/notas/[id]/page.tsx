@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, TriangleAlert } from "lucide-react";
@@ -13,6 +14,8 @@ import { numeroGuia, SELECT_NOTAS, STATUS_NF, type NotaResumo } from "@/lib/nota
 import { NotaForm, type OcSaldo } from "../nota-form";
 import { Anexos, type Anexo } from "./anexos";
 import { CancelarNota } from "./cancelar";
+
+export const metadata: Metadata = { title: "Nota fiscal" };
 
 export default async function NotaPage({ params }: PageProps<"/notas/[id]">) {
   const id = Number((await params).id);

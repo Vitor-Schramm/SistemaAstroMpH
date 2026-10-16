@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -12,6 +13,11 @@ import { numeroMapa, numeroOC, numeroSolicitacao, STATUS_MAPA, STATUS_OC, type L
 import { MapaForm } from "../mapa-form";
 import { CotacaoEditor, type ItemMapa, type Participante } from "../cotacao-editor";
 import { AcoesMapa } from "./acoes";
+
+export async function generateMetadata({ params }: PageProps<"/mapas/[id]">): Promise<Metadata> {
+  const id = Number((await params).id);
+  return { title: Number.isInteger(id) ? numeroMapa(id) : "Não encontrado" };
+}
 
 export default async function MapaPage({ params }: PageProps<"/mapas/[id]">) {
   const id = Number((await params).id);

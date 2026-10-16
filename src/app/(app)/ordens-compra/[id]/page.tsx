@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -15,6 +16,11 @@ import { OcForm } from "../oc-form";
 import { AcoesOc } from "./acoes";
 
 type AprovacaoRow = { papel: "engenharia" | "financeiro"; aprovado: boolean; justificativa: string | null; decidido_em: string; usuario: { nome: string } | null };
+
+export async function generateMetadata({ params }: PageProps<"/ordens-compra/[id]">): Promise<Metadata> {
+  const id = Number((await params).id);
+  return { title: Number.isInteger(id) ? numeroOC(id) : "Não encontrado" };
+}
 
 export default async function OcPage({ params }: PageProps<"/ordens-compra/[id]">) {
   const id = Number((await params).id);

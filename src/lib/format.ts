@@ -64,9 +64,11 @@ export const moeda = (v: number | null | undefined) =>
 
 export const data = (v: string | null | undefined) => {
   if (!v) return "";
+  // Timestamp completo: converte para o fuso de São Paulo antes de pegar a data.
+  if (v.length > 10) return new Date(v).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
   const [a, m, d] = v.slice(0, 10).split("-");
   return `${d}/${m}/${a}`;
 };
 
 export const dataHora = (v: string | null | undefined) =>
-  v ? new Date(v).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" }) : "";
+  v ? new Date(v).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Sao_Paulo" }) : "";

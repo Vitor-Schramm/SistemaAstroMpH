@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { traduzirErro } from "@/lib/erros";
 
 export type Resultado = { ok: true; id?: number; url?: string } | { ok: false; erro: string; verbaInsuficiente?: boolean };
 
@@ -10,7 +11,7 @@ const ROTAS_NF = ["/notas", "/notas-cinza", "/notas-azul", "/aprovacao-nf", "/gu
 async function rpc(fn: string, args: Record<string, unknown>) {
   const supabase = await createClient();
   const { data, error } = await supabase.rpc(fn, args);
-  return { data, erro: error?.message };
+  return { data, erro: error ? traduzirErro(error.message) : undefined };
 }
 
 function revalidar(extra: string[] = []) {

@@ -115,13 +115,13 @@ export function ItensEditor({
           <TableHeader>
             <TableRow>
               <TableHead className="w-10">#</TableHead>
-              {titulo && <TableHead className="w-36">Título</TableHead>}
-              <TableHead className="w-28">Cód.</TableHead>
+              {titulo && <TableHead className="w-36 min-w-32">Título</TableHead>}
+              <TableHead className="w-28 min-w-28">Cód.</TableHead>
               <TableHead className="min-w-64">Descrição</TableHead>
-              <TableHead className="w-28">Qtde</TableHead>
-              <TableHead className="w-24">Unid.</TableHead>
-              <TableHead className="w-36">{preco === "medio" ? "Vl. médio" : "Vl. unitário"}</TableHead>
-              <TableHead className="w-32 text-right">Subtotal</TableHead>
+              <TableHead className="w-28 min-w-24">Qtde</TableHead>
+              <TableHead className="w-24 min-w-20">Unid.</TableHead>
+              <TableHead className="w-36 min-w-32">{preco === "medio" ? "Vl. médio" : "Vl. unitário"}</TableHead>
+              <TableHead className="w-32 min-w-28 text-right">Subtotal</TableHead>
               {!somenteLeitura && <TableHead className="w-10" />}
             </TableRow>
           </TableHeader>

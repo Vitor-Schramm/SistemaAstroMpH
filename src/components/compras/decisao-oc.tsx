@@ -37,7 +37,8 @@ export function DecisaoOc({
 }) {
   const router = useRouter();
   const [acao, setAcao] = useState<"aprovar" | "reprovar" | null>(null);
-  const [papel, setPapel] = useState<"engenharia" | "financeiro">(pendentes.find((p) => papeis.includes(p)) ?? papeis[0]);
+  const padrao = () => pendentes.find((p) => papeis.includes(p)) ?? papeis[0];
+  const [papel, setPapel] = useState<"engenharia" | "financeiro">(padrao);
   const [justificativa, setJustificativa] = useState("");
   const [pending, startTransition] = useTransition();
 
@@ -58,10 +59,16 @@ export function DecisaoOc({
   return (
     <>
       <div className="flex gap-2">
-        <Button size={compacto ? "sm" : "default"} onClick={() => setAcao("aprovar")} disabled={pending}>
+        <Button size={compacto ? "sm" : "default"} onClick={() => {
+            setPapel(padrao());
+            setAcao("aprovar");
+          }} disabled={pending}>
           <Check /> Aprovar
         </Button>
-        <Button size={compacto ? "sm" : "default"} variant="destructive" onClick={() => setAcao("reprovar")} disabled={pending}>
+        <Button size={compacto ? "sm" : "default"} variant="destructive" onClick={() => {
+            setPapel(padrao());
+            setAcao("reprovar");
+          }} disabled={pending}>
           <X /> Reprovar
         </Button>
       </div>
