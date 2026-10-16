@@ -21,11 +21,24 @@ import { moeda } from "@/lib/format";
 import { decidirNota, estornarPagamento, pagarNota } from "@/lib/notas/actions";
 
 type Nota = { id: number; numero: string; valor: number; fornecedor_nome: string };
+type Res = { ok: boolean; erro?: string; verbaInsuficiente?: boolean };
+type Decidir = (id: number, aprovado: boolean, justificativa: string) => Promise<Res>;
+type Pagar = (id: number, data: string, forcar: boolean) => Promise<Res>;
 
 const hoje = () => new Date().toLocaleDateString("sv-SE", { timeZone: "America/Sao_Paulo" });
 
 /** Aprovar / reprovar uma NF (engenharia). */
-export function DecisaoNota({ nota, compacto = false }: { nota: Nota; compacto?: boolean }) {
+export function DecisaoNota({
+  nota,
+  compacto = false,
+  decidir = decidirNota,
+  rotulo = "nota",
+}: {
+  nota: Nota;
+  compacto?: boolean;
+  decidir?: Decidir;
+  rotulo?: string;
+}) {
   const router = useRouter();
   const [acao, setAcao] = useState<"aprovar" | "reprovar" | null>(null);
   const [just, setJust] = useState("");
@@ -34,9 +47,9 @@ export function DecisaoNota({ nota, compacto = false }: { nota: Nota; compacto?:
   const confirmar = () => {
     if (acao === "reprovar" && !just.trim()) return toast.error("Informe a justificativa da reprovação.");
     startTransition(async () => {
-      const r = await decidirNota(nota.id, acao === "aprovar", just);
+      const r = await decidir(nota.id, acao === "aprovar", just);
       if (!r.ok) return void toast.error(r.erro);
-      toast.success(`Nota ${nota.numero} ${acao === "aprovar" ? "aprovada" : "reprovada"}.`);
+      toast.success(`${rotulo[0].toUpperCase() + rotulo.slice(1)} ${nota.numero}: ${acao === "aprovar" ? "aprovado" : "reprovado"}.`);
       setAcao(null);
       setJust("");
       router.refresh();
@@ -57,7 +70,7 @@ export function DecisaoNota({ nota, compacto = false }: { nota: Nota; compacto?:
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {acao === "aprovar" ? "Aprovar" : "Reprovar"} nota {nota.numero}
+              {acao === "aprovar" ? "Aprovar" : "Reprovar"} {rotulo} {nota.numero}
             </DialogTitle>
             <DialogDescription>
               {nota.fornecedor_nome} · {moeda(Number(nota.valor))}
@@ -82,7 +95,17 @@ export function DecisaoNota({ nota, compacto = false }: { nota: Nota; compacto?:
 }
 
 /** Efetivar pagamento (Fase Cinza), com fluxo de pagamento forçado quando falta verba. */
-export function PagarNota({ nota, compacto = false }: { nota: Nota; compacto?: boolean }) {
+export function PagarNota({
+  nota,
+  compacto = false,
+  pagar: executarPagamento = pagarNota,
+  rotulo = "nota",
+}: {
+  nota: Nota;
+  compacto?: boolean;
+  pagar?: Pagar;
+  rotulo?: string;
+}) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [data, setData] = useState(hoje);
@@ -91,12 +114,12 @@ export function PagarNota({ nota, compacto = false }: { nota: Nota; compacto?: b
 
   const pagar = (forcar: boolean) =>
     startTransition(async () => {
-      const r = await pagarNota(nota.id, data, forcar);
+      const r = await executarPagamento(nota.id, data, forcar);
       if (!r.ok) {
-        if (r.verbaInsuficiente) return void setFaltaVerba(r.erro);
+        if (r.verbaInsuficiente) return void setFaltaVerba(r.erro ?? "Verba insuficiente.");
         return void toast.error(r.erro);
       }
-      toast.success(`Pagamento da nota ${nota.numero} efetivado${forcar ? " (forçado)" : ""}.`);
+      toast.success(`Pagamento (${rotulo} ${nota.numero}) efetivado${forcar ? " — forçado" : ""}.`);
       setAberto(false);
       setFaltaVerba(null);
       router.refresh();
@@ -118,7 +141,7 @@ export function PagarNota({ nota, compacto = false }: { nota: Nota; compacto?: b
           <DialogHeader>
             <DialogTitle>{faltaVerba ? "Efetivar pagamento com falta de verba alocada?" : "Efetivar pagamento?"}</DialogTitle>
             <DialogDescription>
-              Nota {nota.numero} · {nota.fornecedor_nome} · <span className="font-medium">{moeda(Number(nota.valor))}</span>
+              {rotulo[0].toUpperCase() + rotulo.slice(1)} {nota.numero} · {nota.fornecedor_nome} · <span className="font-medium">{moeda(Number(nota.valor))}</span>
             </DialogDescription>
           </DialogHeader>
           {faltaVerba && (

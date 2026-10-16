@@ -30,7 +30,7 @@ export const MENU: GrupoMenu[] = [
     titulo: "Dashboards",
     itens: [
       { titulo: "Início", href: "/", icone: LayoutDashboard },
-      { titulo: "Financeiro", href: "/financeiro", icone: Wallet, emBreve: true },
+      { titulo: "Financeiro", href: "/financeiro", icone: Wallet },
     ],
   },
   {
@@ -40,7 +40,7 @@ export const MENU: GrupoMenu[] = [
       { titulo: "Solicitações", href: "/solicitacoes", icone: ClipboardList },
       { titulo: "Mapas", href: "/mapas", icone: Map },
       { titulo: "Ordem Compra", href: "/ordens-compra", icone: ShoppingCart },
-      { titulo: "Ordem Reembolso", href: "/ordens-reembolso", icone: HandCoins, emBreve: true },
+      { titulo: "Ordem Reembolso", href: "/ordens-reembolso", icone: HandCoins },
       { titulo: "Aprovação OC", href: "/aprovacao-oc", icone: BadgeCheck },
     ],
   },
@@ -53,7 +53,7 @@ export const MENU: GrupoMenu[] = [
       { titulo: "Notas Fase Azul", href: "/notas-azul", icone: ReceiptText },
       { titulo: "Guias Adm", href: "/guias-adm", icone: Handshake },
       { titulo: "Verbas das obras", href: "/verbas", icone: PiggyBank },
-      { titulo: "Consultas", href: "/consultas", icone: FileSearch, emBreve: true },
+      { titulo: "Consultas", href: "/consultas", icone: FileSearch },
     ],
   },
   {

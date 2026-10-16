@@ -14,9 +14,10 @@ Mapa do sistema original: [`../analise-sistema-mph.md`](../analise-sistema-mph.m
 | Minha conta (perfil + troca de senha) | ✅ |
 | Cadastros: Clientes, Obras, Fornecedores, Fornecedores Bloqueados, Itens | ✅ |
 | Solicitações → Mapas de cotação → Ordens de Compra → Aprovação OC (Engenharia + Financeiro), impressão/PDF da OC | ✅ |
-| Ordens de Reembolso | ⏳ |
 | Notas fiscais vinculadas à OC (anexos), aprovação da engenharia, Fase Cinza (pagamento com verba da obra, pagamento forçado), Fase Azul (Guias Adm), verbas/aportes | ✅ |
-| Consultas, Dashboards financeiros | ⏳ |
+| Ordens de Reembolso (engenharia aprova, financeiro paga contra a verba) | ✅ |
+| Consultas (OCs, notas, reembolsos, pagamentos) com exportação | ✅ |
+| Dashboards: Início (pendências + painéis Fase Cinza/Azul) e Financeiro | ✅ |
 
 ## Configuração
 
