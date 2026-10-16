@@ -39,8 +39,9 @@ export const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN 
   .map((uf) => ({ valor: uf, rotulo: uf }));
 
 export const REGIMES = [
-  { valor: "administracao", rotulo: "Administração" },
-  { valor: "empreitada", rotulo: "Empreitada" },
+  { valor: "administracao", rotulo: "Administrado" },
+  { valor: "fechado", rotulo: "Fechado" },
+  { valor: "completo", rotulo: "Completo" },
 ];
 
 export const STATUS_OBRA = [
@@ -114,7 +115,11 @@ export const ENTIDADES: Record<string, Entidade> = {
       { nome: "entrega_prevista", rotulo: "Entrega / previsão", tipo: "date" },
       { nome: "as_built", rotulo: "As Built entregue", tipo: "boolean" },
       { nome: "possui_seguro", rotulo: "Possui seguro", tipo: "boolean" },
-      { nome: "engenheiro", rotulo: "Engenheiro", tipo: "text", secao: "Equipe" },
+      { nome: "validade_seguro", rotulo: "Validade do seguro", tipo: "date" },
+      { nome: "ultimo_envio_relatorio", rotulo: "Último envio de relatório", tipo: "date" },
+      { nome: "diretor", rotulo: "Diretor", tipo: "text", secao: "Equipe" },
+      { nome: "coordenador", rotulo: "Coordenador", tipo: "text" },
+      { nome: "engenheiro", rotulo: "Engenheiro", tipo: "text" },
       { nome: "arquitetura", rotulo: "Arquitetura", tipo: "text" },
       { nome: "gerenciadora", rotulo: "Gerenciadora", tipo: "text" },
       { nome: "orcamentista", rotulo: "Orçamentista", tipo: "text" },

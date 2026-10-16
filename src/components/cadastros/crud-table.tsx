@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { Download, MoreHorizontal, Pencil, Plus, Power, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,7 @@ export function CrudTable({
   podeEditar,
   podeExcluir,
   extraStatus,
+  linkDetalhe,
 }: {
   chave: string;
   registros: Registro[];
@@ -71,6 +73,8 @@ export function CrudTable({
   podeExcluir: boolean;
   /** Ids com um selo extra de status (ex.: fornecedor bloqueado). */
   extraStatus?: Record<number, string>;
+  /** Rota base da tela de detalhe: a primeira coluna vira link para `${linkDetalhe}/${id}`. */
+  linkDetalhe?: string;
 }) {
   const entidade = ENTIDADES[chave];
   const [busca, setBusca] = useState("");
@@ -186,9 +190,15 @@ export function CrudTable({
             )}
             {visiveis.map((r) => (
               <TableRow key={r.id} className={pending ? "opacity-60" : undefined}>
-                {entidade.colunas.map((c) => (
+                {entidade.colunas.map((c, i) => (
                   <TableCell key={c.campo} className="max-w-64 truncate">
-                    {textoCelula(entidade, c, r, opcoes)}
+                    {linkDetalhe && i === 0 ? (
+                      <Link href={`${linkDetalhe}/${r.id}`} className="font-medium text-primary hover:underline">
+                        {textoCelula(entidade, c, r, opcoes)}
+                      </Link>
+                    ) : (
+                      textoCelula(entidade, c, r, opcoes)
+                    )}
                   </TableCell>
                 ))}
                 <TableCell className="space-x-1">

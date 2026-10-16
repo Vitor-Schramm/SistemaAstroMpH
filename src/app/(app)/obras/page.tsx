@@ -6,5 +6,5 @@ export const metadata: Metadata = { title: "Obras" };
 
 export default async function ObrasPage() {
   const [dados, clientes] = await Promise.all([carregarCadastro("obras"), opcoesClientes()]);
-  return <CrudTable chave="obras" {...dados} opcoes={{ clientes }} />;
+  return <CrudTable chave="obras" {...dados} opcoes={{ clientes }} linkDetalhe="/obras" />;
 }
