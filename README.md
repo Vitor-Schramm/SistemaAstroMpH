@@ -13,13 +13,14 @@ Mapa do sistema original: [`../analise-sistema-mph.md`](../analise-sistema-mph.m
 | Layout com menu lateral (estrutura do sistema original) | ✅ |
 | Minha conta (perfil + troca de senha) | ✅ |
 | Cadastros: Clientes, Obras, Fornecedores, Fornecedores Bloqueados, Itens | ✅ |
-| Solicitações, Mapas, Ordens de Compra/Reembolso, Aprovação OC | ⏳ próxima fase |
+| Solicitações → Mapas de cotação → Ordens de Compra → Aprovação OC (Engenharia + Financeiro), impressão/PDF da OC | ✅ |
+| Ordens de Reembolso | ⏳ |
 | Notas Fase Cinza/Azul, pagamentos, Guias Adm, Consultas, Dashboards | ⏳ |
 
 ## Configuração
 
 1. Crie um projeto em [supabase.com](https://supabase.com) (região São Paulo).
-2. **Banco:** abra *SQL Editor → New query*, cole o conteúdo de `supabase/migrations/0001_cadastros.sql` e clique *Run*.
+2. **Banco:** abra *SQL Editor → New query* e rode, **um de cada vez e uma única vez**, os arquivos de `supabase/migrations/` em ordem (`0001_cadastros.sql`, `0002_compras.sql`, …).
 3. **Usuários:** em *Authentication → Users → Add user*, crie seu usuário com *Auto Confirm*. **O primeiro usuário criado vira admin.** Os próximos entram como `usuario` (só leitura); o papel é alterado na tabela `perfis`.
 4. **Chaves:** copie `.env.example` para `.env.local` e preencha a URL e a chave *publishable/anon* (em *Project Settings → API*).
 5. Rode:
@@ -38,6 +39,8 @@ Abra http://localhost:3000.
 | `admin` | ✅ | ✅ | ✅ |
 | `financeiro`, `suprimentos` | ✅ | ✅ | — |
 | `engenharia`, `usuario` | ✅ | — | — |
+
+Compras: qualquer usuário ativo cria **solicitações**; **mapas** e **OCs** só `admin` e `suprimentos`. A OC é aprovada quando **engenharia** e **financeiro** aprovam (o `admin` pode decidir por qualquer um dos dois); uma reprovação devolve a OC para compras.
 
 As regras valem no banco (Row Level Security), não só na interface.
 

@@ -22,3 +22,15 @@ export const getPerfil = cache(async (): Promise<Perfil> => {
 export function podeEditarCadastros(papel: Papel) {
   return papel === "admin" || papel === "financeiro" || papel === "suprimentos";
 }
+
+/** Conduz cotações e ordens de compra (espelha public.pode_comprar()). */
+export function podeComprar(papel: Papel) {
+  return papel === "admin" || papel === "suprimentos";
+}
+
+/** Papéis que aprovam OC (admin aprova por qualquer um). */
+export function papeisAprovador(papel: Papel): ("engenharia" | "financeiro")[] {
+  if (papel === "admin") return ["engenharia", "financeiro"];
+  if (papel === "engenharia" || papel === "financeiro") return [papel];
+  return [];
+}

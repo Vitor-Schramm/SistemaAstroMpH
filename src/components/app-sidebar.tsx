@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import type React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -19,10 +20,43 @@ import {
 } from "@/components/ui/sidebar";
 import { MENU } from "@/lib/menu";
 
-export function AppSidebar({ rodape }: { rodape: React.ReactNode }) {
-  const pathname = usePathname();
-  const ativo = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+// O item ativo depende da URL; fica em <Suspense> para não bloquear o shell estático das rotas dinâmicas.
+function MenuAtivo() {
+  return <Menu pathname={usePathname()} />;
+}
 
+function Menu({ pathname }: { pathname: string | null }) {
+  const ativo = (href: string) => pathname !== null && (href === "/" ? pathname === "/" : pathname.startsWith(href));
+  return (
+    <>
+      {MENU.map((grupo) => (
+        <SidebarGroup key={grupo.titulo}>
+          <SidebarGroupLabel>{grupo.titulo}</SidebarGroupLabel>
+          <SidebarMenu>
+            {grupo.itens.map((item) => (
+              <SidebarMenuItem key={item.href}>
+                {item.emBreve ? (
+                  <SidebarMenuButton disabled tooltip={`${item.titulo} (em breve)`} className="opacity-50">
+                    <item.icone />
+                    <span>{item.titulo}</span>
+                  </SidebarMenuButton>
+                ) : (
+                  <SidebarMenuButton isActive={ativo(item.href)} tooltip={item.titulo} render={<Link href={item.href} />}>
+                    <item.icone />
+                    <span>{item.titulo}</span>
+                  </SidebarMenuButton>
+                )}
+                {item.emBreve && <SidebarMenuBadge className="text-[10px]">breve</SidebarMenuBadge>}
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
+      ))}
+    </>
+  );
+}
+
+export function AppSidebar({ rodape }: { rodape: React.ReactNode }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -42,29 +76,9 @@ export function AppSidebar({ rodape }: { rodape: React.ReactNode }) {
       </SidebarHeader>
 
       <SidebarContent>
-        {MENU.map((grupo) => (
-          <SidebarGroup key={grupo.titulo}>
-            <SidebarGroupLabel>{grupo.titulo}</SidebarGroupLabel>
-            <SidebarMenu>
-              {grupo.itens.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  {item.emBreve ? (
-                    <SidebarMenuButton disabled tooltip={`${item.titulo} (em breve)`} className="opacity-50">
-                      <item.icone />
-                      <span>{item.titulo}</span>
-                    </SidebarMenuButton>
-                  ) : (
-                    <SidebarMenuButton isActive={ativo(item.href)} tooltip={item.titulo} render={<Link href={item.href} />}>
-                      <item.icone />
-                      <span>{item.titulo}</span>
-                    </SidebarMenuButton>
-                  )}
-                  {item.emBreve && <SidebarMenuBadge className="text-[10px]">breve</SidebarMenuBadge>}
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroup>
-        ))}
+        <Suspense fallback={<Menu pathname={null} />}>
+          <MenuAtivo />
+        </Suspense>
       </SidebarContent>
 
       <SidebarFooter>

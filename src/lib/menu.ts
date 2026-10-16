@@ -34,11 +34,11 @@ export const MENU: GrupoMenu[] = [
     titulo: "Compras",
     itens: [
       { titulo: "Obras", href: "/obras", icone: Building2 },
-      { titulo: "Solicitações", href: "/solicitacoes", icone: ClipboardList, emBreve: true },
-      { titulo: "Mapas", href: "/mapas", icone: Map, emBreve: true },
-      { titulo: "Ordem Compra", href: "/ordens-compra", icone: ShoppingCart, emBreve: true },
+      { titulo: "Solicitações", href: "/solicitacoes", icone: ClipboardList },
+      { titulo: "Mapas", href: "/mapas", icone: Map },
+      { titulo: "Ordem Compra", href: "/ordens-compra", icone: ShoppingCart },
       { titulo: "Ordem Reembolso", href: "/ordens-reembolso", icone: HandCoins, emBreve: true },
-      { titulo: "Aprovação OC", href: "/aprovacao-oc", icone: BadgeCheck, emBreve: true },
+      { titulo: "Aprovação OC", href: "/aprovacao-oc", icone: BadgeCheck },
     ],
   },
   {
