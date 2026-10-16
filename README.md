@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MPH Sistema
 
-## Getting Started
+Recriação do sistema de obras, compras e pagamentos da MPH Engenharia.
+Stack: **Next.js 16** (App Router, Cache Components), **Supabase** (Postgres, Auth, RLS), **shadcn/ui** (Base UI) e Tailwind 4.
 
-First, run the development server:
+Mapa do sistema original: [`../analise-sistema-mph.md`](../analise-sistema-mph.md).
+
+## Status
+
+| Módulo | Situação |
+|---|---|
+| Login, sessão, proxy de autenticação | ✅ |
+| Layout com menu lateral (estrutura do sistema original) | ✅ |
+| Minha conta (perfil + troca de senha) | ✅ |
+| Cadastros: Clientes, Obras, Fornecedores, Fornecedores Bloqueados, Itens | ✅ |
+| Solicitações, Mapas, Ordens de Compra/Reembolso, Aprovação OC | ⏳ próxima fase |
+| Notas Fase Cinza/Azul, pagamentos, Guias Adm, Consultas, Dashboards | ⏳ |
+
+## Configuração
+
+1. Crie um projeto em [supabase.com](https://supabase.com) (região São Paulo).
+2. **Banco:** abra *SQL Editor → New query*, cole o conteúdo de `supabase/migrations/0001_cadastros.sql` e clique *Run*.
+3. **Usuários:** em *Authentication → Users → Add user*, crie seu usuário com *Auto Confirm*. **O primeiro usuário criado vira admin.** Os próximos entram como `usuario` (só leitura); o papel é alterado na tabela `perfis`.
+4. **Chaves:** copie `.env.example` para `.env.local` e preencha a URL e a chave *publishable/anon* (em *Project Settings → API*).
+5. Rode:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Perfis de acesso (RLS)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Papel | Ler cadastros | Criar/editar/ativar | Excluir |
+|---|---|---|---|
+| `admin` | ✅ | ✅ | ✅ |
+| `financeiro`, `suprimentos` | ✅ | ✅ | — |
+| `engenharia`, `usuario` | ✅ | — | — |
 
-## Learn More
+As regras valem no banco (Row Level Security), não só na interface.
 
-To learn more about Next.js, take a look at the following resources:
+## Estrutura
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  proxy.ts                      # protege as rotas (antigo middleware)
+  app/login/                    # tela e actions de login/logout
+  app/(app)/                    # área logada: layout com sidebar + páginas
+  components/cadastros/         # CRUD genérico (tabela, busca, modal, exportar CSV)
+  lib/cadastros/config.ts       # definição dos campos de cada cadastro
+  lib/supabase/                 # clientes Supabase (server/proxy)
+supabase/migrations/            # SQL do banco
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Para adicionar um cadastro simples, crie a tabela no SQL, descreva os campos em `lib/cadastros/config.ts` e crie uma página com `<CrudTable chave="..."/>`.
