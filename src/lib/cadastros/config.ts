@@ -23,6 +23,8 @@ export type Entidade = {
   tabela: string;
   titulo: string;
   singular: string;
+  /** Substantivo feminino ("nova obra"). */
+  feminino?: boolean;
   descricao: string;
   campos: Campo[];
   colunas: Coluna[];
@@ -91,6 +93,7 @@ export const ENTIDADES: Record<string, Entidade> = {
     tabela: "obras",
     titulo: "Obras",
     singular: "Obra",
+    feminino: true,
     descricao: "Listagem e cadastro de obras",
     ordem: "codigo",
     select: "*, cliente:clientes(nome)",

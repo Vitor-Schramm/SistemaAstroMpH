@@ -86,12 +86,12 @@ export function RegistroForm({
 
   useEffect(() => {
     if (state.ok) {
-      toast.success(`${entidade.singular} salvo com sucesso.`);
+      toast.success(`${entidade.singular} ${entidade.feminino ? "salva" : "salvo"} com sucesso.`);
       onSalvo();
     } else if (state.erro) {
       toast.error(state.erro);
     }
-  }, [state, entidade.singular, onSalvo]);
+  }, [state, entidade.singular, entidade.feminino, onSalvo]);
 
   return (
     <form action={action} className="grid gap-4">

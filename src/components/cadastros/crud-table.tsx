@@ -47,7 +47,7 @@ function exportarCsv(entidade: Entidade, linhas: Registro[], opcoes: Opcoes) {
   const cols = entidade.colunas;
   const esc = (s: string) => `"${s.replace(/"/g, '""')}"`;
   const csv = [
-    [...cols.map((c) => c.rotulo), "Status"].map(esc).join(";"),
+    [...cols.map((c) => c.rotulo), "Situação"].map(esc).join(";"),
     ...linhas.map((r) => [...cols.map((c) => textoCelula(entidade, c, r, opcoes)), r.ativo ? "Ativo" : "Inativo"].map(esc).join(";")),
   ].join("\r\n");
   const url = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
@@ -131,7 +131,7 @@ export function CrudTable({
           </Button>
           {podeEditar && (
             <Button onClick={() => setEditando(null)}>
-              <Plus /> Novo {entidade.singular.toLowerCase()}
+              <Plus /> {entidade.feminino ? "Nova" : "Novo"} {entidade.singular.toLowerCase()}
             </Button>
           )}
         </div>
@@ -172,7 +172,7 @@ export function CrudTable({
               {entidade.colunas.map((c) => (
                 <TableHead key={c.campo}>{c.rotulo}</TableHead>
               ))}
-              <TableHead>Status</TableHead>
+              <TableHead>Situação</TableHead>
               <TableHead className="w-12" />
             </TableRow>
           </TableHeader>
@@ -218,7 +218,7 @@ export function CrudTable({
                             <DropdownMenuItem
                               variant="destructive"
                               onClick={() => {
-                                if (confirm(`Excluir este ${entidade.singular.toLowerCase()}? Essa ação não pode ser desfeita.`))
+                                if (confirm(`Excluir ${entidade.feminino ? "esta" : "este"} ${entidade.singular.toLowerCase()}? Essa ação não pode ser desfeita.`))
                                   executar(() => excluirRegistro(chave, r.id!), "Excluído.");
                               }}
                             >
@@ -258,7 +258,7 @@ export function CrudTable({
       <Dialog open={editando !== undefined} onOpenChange={(o) => !o && fechar()}>
         <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{editando ? `Editar ${entidade.singular.toLowerCase()}` : `Novo ${entidade.singular.toLowerCase()}`}</DialogTitle>
+            <DialogTitle>{editando ? `Editar ${entidade.singular.toLowerCase()}` : `${entidade.feminino ? "Nova" : "Novo"} ${entidade.singular.toLowerCase()}`}</DialogTitle>
             <DialogDescription>Campos com * são obrigatórios.</DialogDescription>
           </DialogHeader>
           {editando !== undefined && (
