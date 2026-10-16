@@ -15,7 +15,8 @@ Mapa do sistema original: [`../analise-sistema-mph.md`](../analise-sistema-mph.m
 | Cadastros: Clientes, Obras, Fornecedores, Fornecedores Bloqueados, Itens | ✅ |
 | Solicitações → Mapas de cotação → Ordens de Compra → Aprovação OC (Engenharia + Financeiro), impressão/PDF da OC | ✅ |
 | Ordens de Reembolso | ⏳ |
-| Notas Fase Cinza/Azul, pagamentos, Guias Adm, Consultas, Dashboards | ⏳ |
+| Notas fiscais vinculadas à OC (anexos), aprovação da engenharia, Fase Cinza (pagamento com verba da obra, pagamento forçado), Fase Azul (Guias Adm), verbas/aportes | ✅ |
+| Consultas, Dashboards financeiros | ⏳ |
 
 ## Configuração
 
@@ -39,6 +40,8 @@ Abra http://localhost:3000.
 | `admin` | ✅ | ✅ | ✅ |
 | `financeiro`, `suprimentos` | ✅ | ✅ | — |
 | `engenharia`, `usuario` | ✅ | — | — |
+
+Notas: `admin`, `suprimentos` e `financeiro` lançam; **engenharia** aprova toda NF; **financeiro** efetiva pagamentos, lança aportes e monta guias.
 
 Compras: qualquer usuário ativo cria **solicitações**; **mapas** e **OCs** só `admin` e `suprimentos`. A OC é aprovada quando **engenharia** e **financeiro** aprovam (o `admin` pode decidir por qualquer um dos dois); uma reprovação devolve a OC para compras.
 

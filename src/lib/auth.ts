@@ -28,6 +28,11 @@ export function podeComprar(papel: Papel) {
   return papel === "admin" || papel === "suprimentos";
 }
 
+/** Espelham as funções do banco da fase 3. */
+export const podeLancarNf = (p: Papel) => p === "admin" || p === "suprimentos" || p === "financeiro";
+export const podeAprovarNf = (p: Papel) => p === "admin" || p === "engenharia";
+export const podePagar = (p: Papel) => p === "admin" || p === "financeiro";
+
 /** Papéis que aprovam OC (admin aprova por qualquer um). */
 export function papeisAprovador(papel: Papel): ("engenharia" | "financeiro")[] {
   if (papel === "admin") return ["engenharia", "financeiro"];
