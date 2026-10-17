@@ -65,7 +65,7 @@ export type PagamentoCliente = {
   descricao: string;
 };
 
-export type Percentual = { id: number; planilha_id: number; tipo: "adm" | "imp"; descricao: string; valor: number };
+export type Percentual = { id: number; planilha_id: number; tipo: "adm" | "imp" | "tot"; descricao: string; valor: number };
 
 export type Responsavel = {
   id: number;

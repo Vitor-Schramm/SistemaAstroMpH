@@ -39,7 +39,7 @@ export const UFS = "AC AL AP AM BA CE DF ES GO MA MT MS MG PA PB PR PE PI RJ RN 
   .map((uf) => ({ valor: uf, rotulo: uf }));
 
 export const REGIMES = [
-  { valor: "administracao", rotulo: "Administrado" },
+  { valor: "administracao", rotulo: "Administração" },
   { valor: "fechado", rotulo: "Fechado" },
   { valor: "completo", rotulo: "Completo" },
 ];

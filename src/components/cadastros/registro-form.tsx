@@ -16,7 +16,7 @@ export type Opcoes = Record<string, { valor: string; rotulo: string }[]>;
 export type Registro = Record<string, unknown> & { id?: number };
 
 export const selectClass =
-  "h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive";
+  "h-[38px] w-full rounded-[0.357rem] border border-input bg-card px-[1rem] text-[1rem] text-foreground outline-none focus-visible:border-primary focus-visible:shadow-[0_3px_10px_0_rgba(34,41,47,0.1)] disabled:bg-[#efefef] aria-invalid:border-destructive";
 
 const largura = { 1: "", 2: "sm:col-span-2", 3: "sm:col-span-3" } as const;
 

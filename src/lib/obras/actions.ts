@@ -102,9 +102,9 @@ export async function excluirPagamentoCliente(obraId: number, id: number): Promi
   return { ok: true };
 }
 
-export async function adicionarPercentual(obraId: number, planilhaId: number, tipo: "adm" | "imp", descricao: string, valor: number): Promise<Resultado> {
+export async function adicionarPercentual(obraId: number, planilhaId: number, tipo: "adm" | "imp" | "tot", descricao: string, valor: number): Promise<Resultado> {
   if (!descricao.trim()) return { ok: false, erro: "Informe a descrição." };
-  if (!Number.isFinite(valor) || valor < 0) return { ok: false, erro: "Percentual inválido." };
+  if (!Number.isFinite(valor) || (tipo !== "tot" && valor < 0)) return { ok: false, erro: "Valor inválido." };
   const supabase = await createClient();
   const { error } = await supabase.from("planilha_percentuais").insert({ planilha_id: planilhaId, tipo, descricao: descricao.trim(), valor });
   if (error) return falha(error)!;
@@ -154,5 +154,37 @@ export async function removerFilial(obraId: number, clienteId: number): Promise<
   const { error } = await supabase.from("obra_filiais").delete().eq("obra_id", obraId).eq("cliente_id", clienteId);
   if (error) return falha(error)!;
   revalidar(obraId);
+  return { ok: true };
+}
+
+/** Campos da obra editáveis no modal "Editar Planilha" do original. */
+export type CamposObra = {
+  inicio: string | null;
+  termino: string | null;
+  entrega_prevista: string | null;
+  ano: number | null;
+  tipo_obra: string | null;
+  metragem: number | null;
+  status_complementar: string | null;
+  as_built_em: string | null;
+  diretor: string | null;
+  coordenador: string | null;
+  engenheiro: string | null;
+  arquitetura: string | null;
+  gerenciadora: string | null;
+  orcamentista: string | null;
+  suprimento: string | null;
+};
+
+export async function editarPlanilhaObra(obraId: number, planilhaId: number, nomeNovo: string, obra: CamposObra): Promise<Resultado> {
+  const supabase = await createClient();
+  if (nomeNovo.trim()) {
+    const { error } = await supabase.from("planilhas").update({ nome: nomeNovo.trim() }).eq("id", planilhaId);
+    if (error) return falha(error)!;
+  }
+  const { error } = await supabase.from("obras").update(obra).eq("id", obraId);
+  if (error) return falha(error)!;
+  revalidar(obraId);
+  revalidatePath("/obras");
   return { ok: true };
 }

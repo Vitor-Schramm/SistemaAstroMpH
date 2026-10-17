@@ -1,40 +1,50 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { Fragment, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronRight, Coins, FileUp, Landmark, MoreHorizontal, Pencil, Percent, Plus, Trash2, Users, Building } from "lucide-react";
+import { LayoutGrid, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Cartao } from "@/components/astro/basicos";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
 import { cn } from "@/lib/utils";
-import { data as fmtData, moeda } from "@/lib/format";
-import { REGIMES, STATUS_OBRA } from "@/lib/cadastros/config";
-import { excluirCc, excluirPlanilha, salvarAlocacao } from "@/lib/obras/actions";
+import { data as fmtData } from "@/lib/format";
+import { salvarAlocacao } from "@/lib/obras/actions";
+import { compararCodigo, numeroBr, type CentroCusto, type PagamentoCliente, type Percentual, type Planilha, type Responsavel } from "@/lib/obras/tipos";
 import {
-  MODOS,
-  NIVEIS_FOLHA,
-  numeroBr,
-  somarFolhas,
-  valoresArvore,
-  type CentroCusto,
-  type ColunaValor,
-  type PagamentoCliente,
-  type Percentual,
-  type Planilha,
-  type Responsavel,
-  type Totais,
-} from "@/lib/obras/tipos";
-import { EditarPlanilha, Filiais, FormCc, ImportarPlanilha, PagamentosCliente, Percentuais, Responsaveis } from "./dialogos";
+  AdicionarCc,
+  CadernoNotas,
+  DetalheCc,
+  EditarPlanilha,
+  Filiais,
+  ImportarPlanilha,
+  ModalVazio,
+  PagamentosCliente,
+  Percentuais,
+  Responsaveis,
+  UploadArquivos,
+} from "./dialogos";
 
-export type ObraCabecalho = {
+// "Controle Financeiro" (obras/view) do AstroTools.
+
+export type ObraDados = {
   id: number;
   codigo: string;
   nome: string;
-  cliente: string | null;
   regime: string;
-  status: string;
+  ativo: boolean;
+  ano: number | null;
+  tipo_obra: string | null;
+  metragem: number | null;
+  inicio: string | null;
+  termino: string | null;
+  entrega_prevista: string | null;
+  validade_seguro: string | null;
+  ultimo_envio_relatorio: string | null;
+  as_built_em?: string | null;
+  status_complementar: string | null;
   diretor: string | null;
   coordenador: string | null;
   engenheiro: string | null;
@@ -42,236 +52,297 @@ export type ObraCabecalho = {
   gerenciadora: string | null;
   orcamentista: string | null;
   suprimento: string | null;
-  inicio: string | null;
-  termino: string | null;
-  possui_seguro: boolean;
-  validade_seguro: string | null;
-  ultimo_envio_relatorio: string | null;
 };
 
 type Opcao = { valor: string; rotulo: string };
 
-const COLUNAS: { chave: ColunaValor; rotulo: string; dica: string }[] = [
-  { chave: "an_financeira", rotulo: "An. Financeira", dica: "Valor da análise financeira (custo previsto)" },
-  { chave: "orcamento", rotulo: "Orçamento", dica: "Valor orçado para o cliente" },
-  { chave: "fechamento", rotulo: "Fechamento", dica: "Σ apropriado em OCs e reembolsos" },
-  { chave: "verba_alocada", rotulo: "Alocado", dica: "Verba do cliente alocada no CC (obra fechada)" },
-  { chave: "val_pago", rotulo: "Val Pago", dica: "Σ notas pagas rateadas no CC" },
-  { chave: "pago_guia", rotulo: "Pago Guia", dica: "Σ pago pelo cliente via guias de envio" },
-  { chave: "a_pagar", rotulo: "A Pagar", dica: "Fechamento − Val Pago" },
-  { chave: "meta", rotulo: "Meta", dica: "Orçamento − Fechamento" },
-];
+const REGIME_ROTULO: Record<string, string> = { administracao: "Administração", fechado: "Fechado", completo: "Completo" };
+const NIVEIS_TITULO = ["T0", "T0-I", "T1"];
+const NIVEIS_ADM = ["ADM0", "ADM", "I0", "I"];
 
-const recuo: Record<string, string> = { T0: "", "T0-I": "", ADM0: "", I0: "", T1: "pl-4", CC: "pl-8", ADM: "pl-8", I: "pl-8" };
+const n2 = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const reais = (v: number) => `R$ ${n2(v)}`;
 
-type Modal =
-  | { tipo: "importar" }
-  | { tipo: "editar"; planilha: Planilha }
-  | { tipo: "cc"; planilha: Planilha; cc: CentroCusto | null }
-  | { tipo: "pagamentos"; planilha: number | null }
-  | { tipo: "percentuais"; planilha: Planilha }
-  | { tipo: "responsaveis" }
-  | { tipo: "filiais" };
+// Cores medidas no original.
+const COR = {
+  alocadoCab: "bg-[#28c76f]",
+  alocado: "bg-[#c2ffc3] dark:bg-[#1f5130]",
+  valPagoCab: "bg-[#fbaa66]",
+  valPago: "bg-[#fdc89c] dark:bg-[#5c3f22]",
+  tituloFechado: "bg-[#adaaaa] dark:bg-[#4d4b4b]",
+  tituloAdm: "bg-[#95b3d7] dark:bg-[#34506f]",
+};
 
-function Info({ rotulo, valor }: { rotulo: string; valor: string | null | undefined }) {
-  return (
-    <div className="min-w-0">
-      <div className="text-xs text-muted-foreground">{rotulo}</div>
-      <div className="truncate text-sm font-medium">{valor || "—"}</div>
-    </div>
-  );
+type Valores = { an: number; orc: number; fech: number; aloc: number; pago: number; aPagar: number; meta: number };
+const zero = (): Valores => ({ an: 0, orc: 0, fech: 0, aloc: 0, pago: 0, aPagar: 0, meta: 0 });
+
+/** Valores de uma linha. Na planilha administrada, Val Pago inclui o pago via guia. */
+function valoresCc(c: CentroCusto, guia: boolean): Valores {
+  const pago = Number(c.val_pago) + (guia ? Number(c.pago_guia) : 0);
+  const fech = Number(c.fechamento);
+  return { an: Number(c.an_financeira), orc: Number(c.orcamento), fech, aloc: Number(c.verba_alocada), pago, aPagar: fech - pago, meta: Number(c.orcamento) - fech };
+}
+function somar(lista: Valores[]): Valores {
+  const t = zero();
+  for (const v of lista) for (const k of Object.keys(t) as (keyof Valores)[]) t[k] += v[k];
+  return t;
 }
 
-function Indicador({ rotulo, valor, destaque }: { rotulo: string; valor: number; destaque?: "ok" | "erro" }) {
-  return (
-    <div className="rounded-md border bg-background px-3 py-2">
-      <div className="text-xs text-muted-foreground">{rotulo}</div>
-      <div className={cn("font-semibold tabular-nums", destaque === "erro" && "text-destructive", destaque === "ok" && "text-emerald-700 dark:text-emerald-400")}>{moeda(valor)}</div>
-    </div>
-  );
+function Destaque({ valor }: { valor: string | null }) {
+  return valor ? <>{valor}</> : <mark className="bg-[#ffff00] px-0 text-inherit">Pendente</mark>;
 }
 
-function TabelaPlanilha({
-  planilha,
-  ccs,
-  podeEstrutura,
-  podeAlocar,
-  onEditarCc,
-  obraId,
-}: {
-  planilha: Planilha;
-  ccs: CentroCusto[];
-  podeEstrutura: boolean;
-  podeAlocar: boolean;
-  onEditarCc: (cc: CentroCusto) => void;
-  obraId: number;
-}) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [alocando, setAlocando] = useState<Record<number, string> | null>(null);
-  const valores = useMemo(() => valoresArvore(ccs), [ccs]);
-  const total = useMemo(() => somarFolhas(ccs), [ccs]);
-  const fechado = planilha.modo === "verba";
-
-  const alocadoEditado = alocando
-    ? ccs.filter((c) => NIVEIS_FOLHA.includes(c.nivel)).reduce((s, c) => s + (numeroBr(alocando[c.id] ?? "0") || 0), 0)
-    : Number(planilha.alocado_ccs);
-  const faltaAlocar = Number(planilha.verba_alocada) - alocadoEditado;
-
-  const salvar = () => {
-    if (!alocando) return;
-    const lista = Object.entries(alocando).map(([id, v]) => ({ cc_id: Number(id), valor: numeroBr(v || "0") }));
-    if (lista.some((a) => Number.isNaN(a.valor))) return void toast.error("Valor inválido.");
-    startTransition(async () => {
-      const r = await salvarAlocacao(obraId, planilha.id, lista);
-      if (!r.ok) return void toast.error(r.erro);
-      toast.success("Verba alocada.");
-      setAlocando(null);
-      router.refresh();
-    });
-  };
-
+function Info({ obra, planilha }: { obra: ObraDados; planilha: Planilha }) {
+  const verba = planilha.modo === "verba";
+  const linha = "mb-[0.15rem]";
   return (
-    <div className="space-y-2">
-      {fechado && (
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div className="grid grid-cols-3 gap-2">
-            <Indicador rotulo="Verba alocada (pagamentos)" valor={Number(planilha.verba_alocada)} />
-            <Indicador rotulo="Alocado nos CCs" valor={alocadoEditado} />
-            <Indicador rotulo="Falta alocar" valor={faltaAlocar} destaque={faltaAlocar < -0.005 ? "erro" : undefined} />
-          </div>
-          {podeAlocar &&
-            ccs.length > 0 &&
-            (alocando ? (
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setAlocando(null)} disabled={pending}>
-                  Cancelar
-                </Button>
-                <Button onClick={salvar} disabled={pending || faltaAlocar < -0.005}>
-                  {pending ? "Salvando…" : "Salvar alocação"}
-                </Button>
-              </div>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => setAlocando(Object.fromEntries(ccs.filter((c) => NIVEIS_FOLHA.includes(c.nivel)).map((c) => [c.id, String(Number(c.verba_alocada) || "")])))}
-              >
-                <Coins /> Alocar verba
-              </Button>
-            ))}
-        </div>
-      )}
-
-      <div className="overflow-x-auto rounded-md border">
-        <table className="w-full min-w-[64rem] text-sm">
-          <thead className="bg-muted text-xs">
-            <tr>
-              <th className="p-2 text-left">Código</th>
-              <th className="p-2 text-left">Descrição</th>
-              {COLUNAS.map((c) => (
-                <th key={c.chave} className="p-2 text-right whitespace-nowrap" title={c.dica}>
-                  {c.rotulo}
-                </th>
-              ))}
-              {podeEstrutura && <th className="w-10" />}
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {ccs.length === 0 && (
-              <tr>
-                <td colSpan={COLUNAS.length + 3} className="p-6 text-center text-muted-foreground">
-                  Planilha sem centros de custo.
-                </td>
-              </tr>
-            )}
-            {ccs.map((c) => {
-              const folha = NIVEIS_FOLHA.includes(c.nivel);
-              const v = valores.get(c.id) as Totais;
-              return (
-                <tr key={c.id} className={cn(!folha && "bg-muted/40 font-semibold", c.nivel === "T0" && "bg-muted/70")}>
-                  <td className={cn("p-2 whitespace-nowrap tabular-nums", recuo[c.nivel])}>{c.codigo}</td>
-                  <td className="max-w-80 truncate p-2" title={c.descricao}>
-                    {c.descricao}
-                  </td>
-                  {COLUNAS.map((col) =>
-                    col.chave === "verba_alocada" && alocando && folha ? (
-                      <td key={col.chave} className="p-1">
-                        <Input
-                          inputMode="decimal"
-                          aria-label={`Alocado em ${c.codigo}`}
-                          value={alocando[c.id] ?? ""}
-                          onChange={(e) => setAlocando({ ...alocando, [c.id]: e.target.value })}
-                          className="h-7 w-28 text-right tabular-nums"
-                        />
-                      </td>
-                    ) : (
-                      <td
-                        key={col.chave}
-                        className={cn(
-                          "p-2 text-right whitespace-nowrap tabular-nums",
-                          (col.chave === "meta" || col.chave === "a_pagar") && v[col.chave] < -0.005 && "text-destructive",
-                          col.chave === "verba_alocada" && !fechado && "text-muted-foreground",
-                        )}
-                      >
-                        {col.chave === "verba_alocada" && !fechado ? "—" : moeda(v[col.chave])}
-                      </td>
-                    ),
-                  )}
-                  {podeEstrutura && (
-                    <td className="p-1">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="size-7" aria-label={`Ações do CC ${c.codigo}`} />}>
-                          <MoreHorizontal />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => onEditarCc(c)}>
-                            <Pencil /> Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            variant="destructive"
-                            onClick={() => {
-                              if (!confirm(`Excluir o CC ${c.codigo}?`)) return;
-                              startTransition(async () => {
-                                const r = await excluirCc(obraId, c.id);
-                                if (!r.ok) return void toast.error(r.erro);
-                                toast.success("CC excluído.");
-                                router.refresh();
-                              });
-                            }}
-                          >
-                            <Trash2 /> Excluir
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-          {ccs.length > 0 && (
-            <tfoot className="border-t-2 bg-muted/60 font-semibold">
-              <tr>
-                <td className="p-2" colSpan={2}>
-                  Total da planilha
-                </td>
-                {COLUNAS.map((col) => (
-                  <td key={col.chave} className="p-2 text-right whitespace-nowrap tabular-nums">
-                    {col.chave === "verba_alocada" && !fechado ? "—" : moeda(total[col.chave])}
-                  </td>
-                ))}
-                {podeEstrutura && <td />}
-              </tr>
-            </tfoot>
-          )}
-        </table>
+    <div className="grid gap-x-[2rem] px-[1rem] pb-[1.5rem] text-[1.07rem] font-medium text-heading md:grid-cols-3">
+      <div>
+        <p className={linha}>Ano: {obra.ano ?? ""}</p>
+        <p className={linha}>Tipo de Obra: {obra.tipo_obra ?? ""}</p>
+        <p className={linha}>Metragem: {obra.metragem != null ? n2(Number(obra.metragem)) : ""}</p>
+        <p className={linha}>Regime: {REGIME_ROTULO[obra.regime] ?? obra.regime}</p>
+        <p className={linha}>Status: {obra.ativo ? "Ativo" : "Inativo"}</p>
+        <p className={linha}>Início da Obra: {fmtData(obra.inicio)}</p>
+        <p className={linha}>Término da Obra: {fmtData(obra.termino)}</p>
+        <p className={linha}>Entrega / Previsão da Obra: {fmtData(obra.entrega_prevista)}</p>
+      </div>
+      <div>
+        <p className={linha}>
+          Ultimo Envio Relatório: <Destaque valor={obra.ultimo_envio_relatorio ? fmtData(obra.ultimo_envio_relatorio) : null} />
+        </p>
+        <p className={linha}>
+          Validade Seguro: <Destaque valor={obra.validade_seguro ? fmtData(obra.validade_seguro) : null} />
+        </p>
+        <p className={linha}>Verba Alocada: {verba ? reais(Number(planilha.verba_alocada)) : "Não se Aplica"}</p>
+        <p className={linha}>Falta Alocar: {verba ? reais(Number(planilha.verba_alocada) - Number(planilha.alocado_ccs)) : "Não se Aplica"}</p>
+        <p className={linha}>As Built: {fmtData(obra.as_built_em ?? null)}</p>
+        <p className={linha}>Status Complementar: {obra.status_complementar ?? ""}</p>
+      </div>
+      <div>
+        <p className={linha}>Diretor: {obra.diretor ?? ""}</p>
+        <p className={linha}>Coordenador: {obra.coordenador ?? ""}</p>
+        <p className={linha}>Engenheiro: {obra.engenheiro ?? ""}</p>
+        <p className={linha}>Arquitetura: {obra.arquitetura ?? ""}</p>
+        <p className={linha}>Gerenciadora: {obra.gerenciadora ?? ""}</p>
+        <p className={linha}>Orçamentista: {obra.orcamentista ?? ""}</p>
+        <p className={linha}>Suprimento: {obra.suprimento ?? ""}</p>
       </div>
     </div>
   );
 }
 
+const th = "px-[1.5rem] py-[0.72rem] text-left align-top text-[0.857rem] font-bold tracking-[0.5px] text-[#22292f] uppercase dark:text-heading";
+const td = "px-[1.5rem] py-[0.72rem] align-middle";
+
+function TabelaPlanilha({
+  obraId,
+  planilha,
+  ccs,
+  podeAlocar,
+  podeEstrutura,
+  onAdicionar,
+  onDetalhar,
+}: {
+  obraId: number;
+  planilha: Planilha;
+  ccs: CentroCusto[];
+  podeAlocar: boolean;
+  podeEstrutura: boolean;
+  onAdicionar: (pai: CentroCusto) => void;
+  onDetalhar: (cc: CentroCusto) => void;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const verba = planilha.modo === "verba";
+  const guia = !verba;
+  const folhas = ccs.filter((c) => !NIVEIS_TITULO.includes(c.nivel));
+  const [alocado, setAlocado] = useState<Record<number, string>>(() => Object.fromEntries(folhas.map((c) => [c.id, n2(Number(c.verba_alocada))])));
+
+  const valorLinha = (c: CentroCusto): Valores => {
+    const v = valoresCc(c, guia);
+    if (podeAlocar && verba) v.aloc = numeroBr(alocado[c.id] ?? "0") || 0;
+    return v;
+  };
+  const totalT0 = (t0: CentroCusto) => somar(folhas.filter((f) => f.codigo.startsWith(`${t0.codigo}.`)).map(valorLinha));
+  const total = somar(folhas.map(valorLinha));
+
+  const atualizar = () => {
+    const lista = folhas.map((c) => ({ cc_id: c.id, valor: numeroBr(alocado[c.id] || "0") }));
+    if (lista.some((a) => Number.isNaN(a.valor))) return void toast.error("Valor inválido.");
+    startTransition(async () => {
+      const r = await salvarAlocacao(obraId, planilha.id, lista);
+      if (!r.ok) return void toast.error(r.erro);
+      toast.success("Alocação atualizada.");
+      router.refresh();
+    });
+  };
+
+  const celulas = (v: Valores) => (
+    <>
+      <td className={td}>{n2(v.an)}</td>
+      <td className={td}>{n2(v.orc)}</td>
+      <td className={td}>{n2(v.fech)}</td>
+      {verba && <td className={cn(td, COR.alocado)}>{n2(v.aloc)}</td>}
+      <td className={cn(td, COR.valPago)}>{n2(v.pago)}</td>
+      <td className={td}>{n2(v.aPagar)}</td>
+      <td className={td}>{n2(v.meta)}</td>
+    </>
+  );
+
+  return (
+    <div className="overflow-x-auto px-[1rem]">
+      <table className="w-full text-[1rem]">
+        <thead className="bg-muted">
+          <tr>
+            <th className={th}>Item</th>
+            <th className={th}>Serviço</th>
+            <th className={th}>An. Financeira</th>
+            <th className={th}>Orçamento</th>
+            <th className={th}>Fechamento</th>
+            {verba && <th className={cn(th, COR.alocadoCab)}>Alocado</th>}
+            <th className={cn(th, COR.valPagoCab)}>Val Pago</th>
+            <th className={th}>A Pagar</th>
+            <th className={th}>Meta</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ccs.map((c) => {
+            if (c.nivel === "T0" || c.nivel === "T0-I") {
+              return (
+                <tr key={c.id} className={cn("border-b border-border font-semibold", verba ? COR.tituloFechado : COR.tituloAdm)}>
+                  <td className={cn(td, "whitespace-nowrap")}>
+                    {c.codigo}
+                    {podeEstrutura && (
+                      <button type="button" onClick={() => onAdicionar(c)} className="ml-[0.4rem] align-middle text-[#1fa28f]" title="Adicionar">
+                        <Plus className="inline size-[14px]" />
+                      </button>
+                    )}
+                  </td>
+                  <td className={td}>{c.descricao}</td>
+                  {celulas(totalT0(c))}
+                </tr>
+              );
+            }
+            if (c.nivel === "T1") {
+              return (
+                <tr key={c.id} className="border-b border-border font-semibold">
+                  <td className={td}>{c.codigo}</td>
+                  <td className={td}>{c.descricao}</td>
+                  <td className={td} />
+                  <td className={td} />
+                  <td className={td} />
+                  {verba && <td className={cn(td, COR.alocado)} />}
+                  <td className={cn(td, COR.valPago)} />
+                  <td className={td} />
+                  <td className={td} />
+                </tr>
+              );
+            }
+            const v = valorLinha(c);
+            return (
+              <tr key={c.id} className="border-b border-border">
+                <td className={cn(td, "whitespace-nowrap")}>
+                  {c.codigo}
+                  <button type="button" onClick={() => onDetalhar(c)} className="ml-[0.4rem] align-middle text-primary" title="Detalhar">
+                    <Search className="inline size-[14px]" />
+                  </button>
+                </td>
+                <td className={td}>{c.descricao}</td>
+                <td className={td}>{n2(v.an)}</td>
+                <td className={td}>{n2(v.orc)}</td>
+                <td className={td}>{n2(v.fech)}</td>
+                {verba && (
+                  <td className={cn(td, COR.alocado)}>
+                    {podeAlocar ? (
+                      <input
+                        aria-label={`Alocado ${c.codigo}`}
+                        value={alocado[c.id] ?? ""}
+                        onChange={(e) => setAlocado({ ...alocado, [c.id]: e.target.value })}
+                        className="w-[7.5rem] bg-transparent outline-none focus:border-b focus:border-primary"
+                      />
+                    ) : (
+                      n2(v.aloc)
+                    )}
+                  </td>
+                )}
+                <td className={cn(td, COR.valPago)}>{n2(v.pago)}</td>
+                <td className={td}>{n2(v.aPagar)}</td>
+                <td className={td}>{n2(v.meta)}</td>
+              </tr>
+            );
+          })}
+          {ccs.length === 0 && (
+            <tr>
+              <td colSpan={verba ? 9 : 8} className={cn(td, "text-center")}>
+                Nenhum registro encontrado
+              </td>
+            </tr>
+          )}
+          <tr className={cn("font-semibold", COR.tituloFechado)}>
+            <td className={td} />
+            <td className={cn(td, "text-center")}>Totais</td>
+            <td className={td}>{n2(total.an)}</td>
+            <td className={td}>{n2(total.orc)}</td>
+            <td className={td}>{n2(total.fech)}</td>
+            {verba && <td className={td}>{n2(total.aloc)}</td>}
+            <td className={td}>{n2(total.pago)}</td>
+            <td className={td}>{n2(total.aPagar)}</td>
+            <td className={td}>{n2(total.meta)}</td>
+          </tr>
+          {verba && (
+            <tr>
+              <td className={cn(td, "py-[0.5rem]")} colSpan={5}>
+                {podeAlocar && (
+                  <Button onClick={atualizar} disabled={pending}>
+                    {pending ? "Atualizando…" : "Atualizar"}
+                  </Button>
+                )}
+              </td>
+              <td colSpan={2} className={cn(td, "text-center font-medium", COR.tituloFechado)} title="Alocado − Val Pago">
+                {n2(total.aloc - total.pago)}
+              </td>
+              <td colSpan={2} />
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+type Modal =
+  | { tipo: "pagamentos" }
+  | { tipo: "filiais" }
+  | { tipo: "responsaveis" }
+  | { tipo: "percentuais" }
+  | { tipo: "importar" }
+  | { tipo: "caderno" }
+  | { tipo: "relatorio" }
+  | { tipo: "contrato" }
+  | { tipo: "alertas" }
+  | { tipo: "semana" }
+  | { tipo: "editar"; planilha: Planilha }
+  | { tipo: "addcc"; planilha: Planilha; pai: CentroCusto }
+  | { tipo: "detalhe"; cc: CentroCusto };
+
+const TITULOS: Record<Modal["tipo"], string> = {
+  pagamentos: "Pagamentos Cliente",
+  filiais: "Filiais",
+  responsaveis: "Responsaveis",
+  percentuais: "Percentuais Obra",
+  importar: "Importar Planilha",
+  caderno: "Caderno de Notas",
+  relatorio: "Relatório de Obras",
+  contrato: "Contratos da Obra",
+  alertas: "Alertas de Pagamento",
+  semana: "Pagamentos da Semana",
+  editar: "Editar Planilha",
+  addcc: "Adicionar Centro de Custo",
+  detalhe: "Detalhamento Lançamentos Efetuados",
+};
+
 export function ControleFinanceiro({
-  voltar,
   obra,
   planilhas,
   ccs,
@@ -285,8 +356,7 @@ export function ControleFinanceiro({
   podeFinanceiro,
   ehAdmin,
 }: {
-  voltar: React.ReactNode;
-  obra: ObraCabecalho;
+  obra: ObraDados;
   planilhas: Planilha[];
   ccs: CentroCusto[];
   pagamentos: PagamentoCliente[];
@@ -301,225 +371,221 @@ export function ControleFinanceiro({
 }) {
   const router = useRouter();
   const [modal, setModal] = useState<Modal | null>(null);
-  const [fechadas, setFechadas] = useState<Set<number>>(new Set());
-  const [soAtivas, setSoAtivas] = useState(true);
-  const [, startTransition] = useTransition();
   const fechar = () => setModal(null);
+  const ativas = planilhas.filter((p) => p.ativo);
 
-  const visiveis = planilhas.filter((p) => !soAtivas || p.ativo);
-  const ccsDe = (id: number) => ccs.filter((c) => c.planilha_id === id);
-  const totalGeral = somarFolhas(ccs.filter((c) => visiveis.some((p) => p.id === c.planilha_id)));
-  const verbaTotal = visiveis.filter((p) => p.modo === "verba").reduce((s, p) => s + Number(p.verba_alocada), 0);
-  const alocadoTotal = visiveis.filter((p) => p.modo === "verba").reduce((s, p) => s + Number(p.alocado_ccs), 0);
-  const rotulo = (lista: Opcao[], v: string) => lista.find((o) => o.valor === v)?.rotulo ?? v;
-  const resp = (tipo: Responsavel["tipo"]) =>
-    responsaveis
-      .filter((r) => r.tipo === tipo)
-      .map((r) => r.perfil?.nome)
-      .join(", ");
+  const ccsPlanilha = useMemo(() => {
+    const m = new Map<number, CentroCusto[]>();
+    for (const c of ccs) if (!NIVEIS_ADM.includes(c.nivel)) m.set(c.planilha_id, [...(m.get(c.planilha_id) ?? []), c]);
+    return m;
+  }, [ccs]);
+  const resumoAdm = ccs.filter((c) => c.nivel === "ADM" || c.nivel === "I").sort((a, b) => compararCodigo(a.codigo, b.codigo));
 
-  const alternar = (id: number) =>
-    setFechadas((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
+  const totalPlanilha = (p: Planilha) => {
+    const guia = p.modo === "guia";
+    const v = somar((ccsPlanilha.get(p.id) ?? []).filter((c) => !NIVEIS_TITULO.includes(c.nivel)).map((c) => valoresCc(c, guia)));
+    // Valor total ("TOT") informado nos percentuais substitui An. Financeira, Orçamento e Fechamento, como no original.
+    const tot = percentuais.filter((x) => x.planilha_id === p.id && x.tipo === "tot").reduce((s, x) => s + Number(x.valor), 0);
+    return tot ? { ...v, an: tot, orc: tot, fech: tot } : v;
+  };
+  const totaisGerais = ativas.map((p) => ({ p, v: totalPlanilha(p) }));
+  const geral = somar(totaisGerais.map((t) => t.v));
 
-  const titulos: Record<Modal["tipo"], [string, string]> = {
-    importar: ["Importar planilha de orçamento", "Cria uma planilha nova com a árvore de centros de custo."],
-    editar: ["Editar planilha", "Nome, modo e situação da planilha."],
-    cc: ["Centro de custo", "Linhas de título (T0/T1) mostram a soma dos centros de custo abaixo delas."],
-    pagamentos: ["Pagamentos do cliente", "Valores pagos pelo cliente à MPH, por planilha."],
-    percentuais: ["Percentuais da planilha", "Taxa de administração e impostos cobrados sobre a planilha."],
-    responsaveis: ["Responsáveis da obra", "Engenheiro (com limite de aprovação de OC), coordenador e suprimentos."],
-    filiais: ["Filiais", "Outros clientes ligados a esta obra."],
+  const exportarExcel = () => {
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+    const linhas = ativas.flatMap((p) => [
+      `<tr><td colspan="10"><b>${esc(p.nome)}</b></td></tr>`,
+      ...(ccsPlanilha.get(p.id) ?? []).map((c) => {
+        const v = valoresCc(c, p.modo === "guia");
+        const t = NIVEIS_TITULO.includes(c.nivel);
+        return `<tr${t ? ' style="font-weight:bold"' : ""}><td>${esc(c.codigo)}</td><td>${esc(c.descricao)}</td>${(t ? ["", "", "", "", "", "", "", ""] : [v.an, v.orc, v.fech, v.aloc, Number(c.val_pago), Number(c.pago_guia), v.aPagar, v.meta].map(n2))
+          .map((x) => `<td>${x}</td>`)
+          .join("")}</tr>`;
+      }),
+    ]);
+    const html = `<table border="1"><thead><tr><th>Item</th><th>Serviço</th><th>An. Financeira</th><th>Orçamento</th><th>Fechamento</th><th>Alocado</th><th>Val Pago</th><th>Pago Guia</th><th>A Pagar</th><th>Meta</th></tr></thead><tbody>${linhas.join("")}</tbody></table>`;
+    const url = URL.createObjectURL(new Blob(["﻿" + html], { type: "application/vnd.ms-excel;charset=utf-8" }));
+    Object.assign(document.createElement("a"), { href: url, download: "controle_financeiro.xls" }).click();
+    URL.revokeObjectURL(url);
   };
 
+  const emBreve = (o: string) => toast.info(`${o}: disponível quando notas e pagamentos forem migrados para o novo modelo.`);
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {voltar}
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {obra.codigo} — {obra.nome}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Controle financeiro · {obra.cliente ?? "Sem cliente"} · {rotulo(REGIMES, obra.regime)} · {rotulo(STATUS_OBRA, obra.status)}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setModal({ tipo: "pagamentos", planilha: null })}>
-            <Landmark /> Pagamentos do cliente
-          </Button>
-          <Button variant="outline" onClick={() => setModal({ tipo: "responsaveis" })}>
-            <Users /> Responsáveis
-          </Button>
-          <Button variant="outline" onClick={() => setModal({ tipo: "filiais" })}>
-            <Building /> Filiais
-          </Button>
-          {podeEstrutura && (
-            <Button onClick={() => setModal({ tipo: "importar" })}>
-              <FileUp /> Importar planilha
-            </Button>
-          )}
-        </div>
-      </div>
+    <>
+      <CabecalhoPagina titulo="Controle Financeiro" migalhas={[{ titulo: "Obras", href: "/obras" }, { titulo: "Controle Financeiro" }]} />
 
-      <div className="grid gap-x-6 gap-y-3 rounded-md border p-4 sm:grid-cols-3 lg:grid-cols-6">
-        <Info rotulo="Diretor" valor={obra.diretor} />
-        <Info rotulo="Coordenador" valor={resp("coordenador") || obra.coordenador} />
-        <Info rotulo="Engenheiro" valor={resp("engenheiro") || obra.engenheiro} />
-        <Info rotulo="Suprimento" valor={resp("suprimentos") || obra.suprimento} />
-        <Info rotulo="Arquitetura" valor={obra.arquitetura} />
-        <Info rotulo="Gerenciadora" valor={obra.gerenciadora} />
-        <Info rotulo="Orçamentista" valor={obra.orcamentista} />
-        <Info rotulo="Início" valor={fmtData(obra.inicio)} />
-        <Info rotulo="Término" valor={fmtData(obra.termino)} />
-        <Info rotulo="Seguro" valor={obra.possui_seguro ? `Sim${obra.validade_seguro ? ` · até ${fmtData(obra.validade_seguro)}` : ""}` : "Não"} />
-        <Info rotulo="Último relatório" valor={fmtData(obra.ultimo_envio_relatorio)} />
-        <Info rotulo="Filiais" valor={filiais.map((f) => f.nome).join(", ")} />
-      </div>
+      <Cartao className="pb-[1.5rem]">
+        <div className="flex justify-end gap-[0.3rem] px-[1rem] pt-[1rem]">
+          <Button variant="outline" onClick={exportarExcel}>
+            Excel
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="flex size-[38px] items-center justify-center rounded-[0.358rem] bg-primary text-white" aria-label="Opções">
+              <LayoutGrid className="size-[14px]" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[13rem]">
+              <DropdownMenuItem onClick={() => setModal({ tipo: "pagamentos" })}>Pagamentos Cliente</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setModal({ tipo: "filiais" })}>Filiais</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setModal({ tipo: "alertas" })}>Alertas Pagamentos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => emBreve("Pagamentos")}>Pagamentos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setModal({ tipo: "semana" })}>Pagamentos da Semana</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setModal({ tipo: "relatorio" })}>Relatório de Obra</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => emBreve("Controle Contratos")}>Controle Contratos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setModal({ tipo: "caderno" })}>Caderno de Notas</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setModal({ tipo: "contrato" })}>Upload Contrato da Obra</DropdownMenuItem>
+              {(podeEstrutura || ehAdmin) && <DropdownMenuSeparator />}
+              {ehAdmin && <DropdownMenuItem onClick={() => setModal({ tipo: "responsaveis" })}>Responsáveis</DropdownMenuItem>}
+              {podeEstrutura && <DropdownMenuItem onClick={() => setModal({ tipo: "percentuais" })}>Percentuais</DropdownMenuItem>}
+              {podeEstrutura && <DropdownMenuItem onClick={() => setModal({ tipo: "importar" })}>Importar Planilha</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" onClick={() => router.push("/obras")}>
+            Voltar
+          </Button>
+        </div>
 
-      <div className="space-y-2 rounded-md border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Totalizador da obra</h2>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={soAtivas} onChange={(e) => setSoAtivas(e.target.checked)} className="size-4 accent-primary" />
-            Só planilhas ativas
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          {COLUNAS.map((c) => (
-            <Indicador key={c.chave} rotulo={c.rotulo} valor={totalGeral[c.chave]} destaque={(c.chave === "meta" || c.chave === "a_pagar") && totalGeral[c.chave] < -0.005 ? "erro" : undefined} />
-          ))}
-        </div>
-        {visiveis.some((p) => p.modo === "verba") && (
-          <div className="grid grid-cols-3 gap-2 sm:max-w-xl">
-            <Indicador rotulo="Verba alocada" valor={verbaTotal} />
-            <Indicador rotulo="Alocado nos CCs" valor={alocadoTotal} />
-            <Indicador rotulo="Falta alocar" valor={verbaTotal - alocadoTotal} destaque={verbaTotal - alocadoTotal < -0.005 ? "erro" : undefined} />
+        {ativas.length === 0 && (
+          <div className="px-[1rem] py-[3rem] text-center">
+            <h1 className="mb-[0.5rem] text-[2.6rem] font-semibold uppercase">{obra.nome}</h1>
+            <p>Nenhuma planilha importada para esta obra.{podeEstrutura && " Use Opções → Importar Planilha."}</p>
           </div>
         )}
-        <p className="text-xs text-muted-foreground">
-          Fechamento, Val Pago e Pago Guia passam a ser alimentados quando as OCs, notas e guias forem apropriadas nos centros de custo (próximas fases).
-        </p>
-      </div>
 
-      {visiveis.length === 0 && (
-        <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Nenhuma planilha de orçamento. {podeEstrutura ? "Use “Importar planilha” para criar a primeira." : ""}
-        </div>
-      )}
-
-      {visiveis.map((p) => {
-        const aberta = !fechadas.has(p.id);
-        const lista = ccsDe(p.id);
-        const pcts = percentuais.filter((x) => x.planilha_id === p.id);
-        return (
-          <section key={p.id} className={cn("space-y-3 rounded-md border p-4", !p.ativo && "opacity-70")}>
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <button type="button" onClick={() => alternar(p.id)} className="flex items-center gap-2 text-left">
-                {aberta ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
-                <span className="font-semibold">
-                  {p.seq}. {p.nome}
-                </span>
-                <span
-                  className={cn(
-                    "rounded-full px-2 py-0.5 text-xs font-medium",
-                    p.modo === "verba" ? "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300" : "bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-300",
-                  )}
-                >
-                  {MODOS[p.modo]}
-                </span>
-                {!p.ativo && <span className="text-xs text-muted-foreground">(inativa)</span>}
-                {pcts.length > 0 && (
-                  <span className="text-xs text-muted-foreground">
-                    · Adm {Number(p.taxa_adm).toLocaleString("pt-BR")}% · Imp {Number(p.taxa_imp).toLocaleString("pt-BR")}%
-                  </span>
+        {ativas.map((p) => {
+          const pcts = percentuais.filter((x) => x.planilha_id === p.id);
+          const taxa = (t: "adm" | "imp") => pcts.filter((x) => x.tipo === t).reduce((s, x) => s + Number(x.valor), 0);
+          return (
+            <Fragment key={p.id}>
+              <div className="px-[1rem] pt-[1.5rem] pb-[1.5rem] text-center">
+                <h1 className="mb-[1rem] text-[2.6rem] leading-tight font-semibold uppercase">{p.nome}</h1>
+                {pcts.some((x) => x.tipo !== "tot") && (
+                  <p className="mb-[0.5rem] text-[1rem] font-medium text-heading">
+                    Taxa ADM: {n2(taxa("adm"))}&nbsp;&nbsp;Taxa IMP: {n2(taxa("imp"))}
+                  </p>
                 )}
-              </button>
-              <div className="flex flex-wrap gap-2">
-                {podeEstrutura && (
-                  <Button size="sm" variant="outline" onClick={() => setModal({ tipo: "cc", planilha: p, cc: null })}>
-                    <Plus /> Adicionar CC
-                  </Button>
-                )}
-                <Button size="sm" variant="outline" onClick={() => setModal({ tipo: "pagamentos", planilha: p.id })}>
-                  <Landmark /> Pagamentos
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => setModal({ tipo: "percentuais", planilha: p })}>
-                  <Percent /> Percentuais
-                </Button>
-                {podeEstrutura && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger render={<Button size="icon" variant="ghost" className="size-8" aria-label="Ações da planilha" />}>
-                      <MoreHorizontal />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setModal({ tipo: "editar", planilha: p })}>
-                        <Pencil /> Editar planilha
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => {
-                          if (!confirm(`Excluir a planilha "${p.nome}" e todos os seus centros de custo?`)) return;
-                          startTransition(async () => {
-                            const r = await excluirPlanilha(obra.id, p.id);
-                            if (!r.ok) return void toast.error(r.erro);
-                            toast.success("Planilha excluída.");
-                            router.refresh();
-                          });
-                        }}
-                      >
-                        <Trash2 /> Excluir planilha
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                {podeEstrutura ? (
+                  <button type="button" className="text-[1.07rem] font-medium text-heading" onClick={() => setModal({ tipo: "editar", planilha: p })}>
+                    Editar
+                  </button>
+                ) : (
+                  <span className="text-[1.07rem] font-medium text-heading">Editar</span>
                 )}
               </div>
-            </div>
-            {aberta && (
+              <Info obra={obra} planilha={p} />
               <TabelaPlanilha
-                planilha={p}
-                ccs={lista}
+                key={`${p.id}-${(ccsPlanilha.get(p.id) ?? []).map((c) => c.verba_alocada).join(",")}`}
                 obraId={obra.id}
+                planilha={p}
+                ccs={ccsPlanilha.get(p.id) ?? []}
+                podeAlocar={podeFinanceiro}
                 podeEstrutura={podeEstrutura}
-                podeAlocar={podeFinanceiro && p.modo === "verba"}
-                onEditarCc={(cc) => setModal({ tipo: "cc", planilha: p, cc })}
+                onAdicionar={(pai) => setModal({ tipo: "addcc", planilha: p, pai })}
+                onDetalhar={(cc) => setModal({ tipo: "detalhe", cc })}
               />
-            )}
-          </section>
-        );
-      })}
+            </Fragment>
+          );
+        })}
+
+        {ativas.length > 0 && (
+          <>
+            <h4 className="mt-[3rem] mb-[1.5rem] text-center text-[1.285rem] font-medium">Total Geral</h4>
+            <div className="overflow-x-auto px-[1rem]">
+              <table className="w-full text-[1rem]">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className={th}>Planilha</th>
+                    <th className={th}>An. Financeira</th>
+                    <th className={th}>Orçamento</th>
+                    <th className={th}>Fechamento</th>
+                    <th className={cn(th, COR.valPagoCab, "text-white")}>Val Pago</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {totaisGerais.map(({ p, v }) => (
+                    <tr key={p.id} className="border-b border-border">
+                      <td className={cn(td, "uppercase")}>{p.nome}</td>
+                      <td className={td}>{n2(v.an)}</td>
+                      <td className={td}>{n2(v.orc)}</td>
+                      <td className={td}>{n2(v.fech)}</td>
+                      <td className={td}>{n2(v.pago)}</td>
+                    </tr>
+                  ))}
+                  <tr className={cn("font-semibold", COR.tituloFechado)}>
+                    <td className={td}>Total</td>
+                    <td className={td}>{n2(geral.an)}</td>
+                    <td className={td}>{n2(geral.orc)}</td>
+                    <td className={td}>{n2(geral.fech)}</td>
+                    <td className={td}>{n2(geral.pago)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {resumoAdm.length > 0 && (
+          <>
+            <h4 className="mt-[1.5rem] mb-[1.5rem] text-center text-[1.285rem] font-medium">Resumo Administração</h4>
+            <div className="overflow-x-auto px-[1rem]">
+              <table className="w-full text-[1rem]">
+                <thead className="bg-muted">
+                  <tr>
+                    <th className={th}>Item</th>
+                    <th className={th}>Serviço</th>
+                    <th className={th}>Orçamento</th>
+                    <th className={th}>Fechamento</th>
+                    <th className={cn(th, COR.valPagoCab, "text-white")}>Val Pago</th>
+                    <th className={th}>A Pagar</th>
+                    <th className={th}>Meta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumoAdm.map((c) => {
+                    const v = valoresCc(c, true);
+                    return (
+                      <tr key={c.id} className={cn("border-b border-white font-semibold", COR.tituloAdm)}>
+                        <td className={td}>{c.codigo}</td>
+                        <td className={td}>{c.descricao}</td>
+                        <td className={td}>{n2(v.orc)}</td>
+                        <td className={td}>{n2(v.fech)}</td>
+                        <td className={td}>{n2(v.pago)}</td>
+                        <td className={td}>{n2(v.aPagar)}</td>
+                        <td className={td}>{n2(v.meta)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </Cartao>
 
       <Dialog open={modal !== null} onOpenChange={(o) => !o && fechar()}>
-        <DialogContent className={cn(modal && ["pagamentos", "importar"].includes(modal.tipo) ? "sm:max-w-4xl" : "sm:max-w-2xl")}>
+        <DialogContent className={cn(modal && ["pagamentos", "semana", "importar", "responsaveis", "percentuais", "editar"].includes(modal.tipo) ? "sm:max-w-5xl" : "sm:max-w-2xl")}>
           {modal && (
             <>
               <DialogHeader>
-                <DialogTitle>
-                  {titulos[modal.tipo][0]}
-                  {(modal.tipo === "percentuais" || modal.tipo === "editar") && ` — ${modal.planilha.nome}`}
-                </DialogTitle>
-                <DialogDescription>{titulos[modal.tipo][1]}</DialogDescription>
+                <DialogTitle className="text-[1.285rem] font-medium text-heading">{TITULOS[modal.tipo]}</DialogTitle>
               </DialogHeader>
+              {modal.tipo === "pagamentos" && <PagamentosCliente obraId={obra.id} planilhas={planilhas} pagamentos={pagamentos} podeLancar={podeFinanceiro} onFechar={fechar} />}
+              {modal.tipo === "filiais" && <Filiais obraId={obra.id} filiais={filiais} clientes={clientes} podeEditar={podeEstrutura} onFechar={fechar} />}
+              {modal.tipo === "responsaveis" && <Responsaveis obraId={obra.id} responsaveis={responsaveis} perfis={perfis} podeEditar={ehAdmin} onFechar={fechar} />}
+              {modal.tipo === "percentuais" && <Percentuais obraId={obra.id} planilhas={planilhas} percentuais={percentuais} podeEditar={podeEstrutura} onFechar={fechar} />}
               {modal.tipo === "importar" && <ImportarPlanilha obraId={obra.id} regime={obra.regime} onFechar={fechar} />}
-              {modal.tipo === "editar" && <EditarPlanilha obraId={obra.id} planilha={modal.planilha} onFechar={fechar} />}
-              {modal.tipo === "cc" && <FormCc key={modal.cc?.id ?? "novo"} obraId={obra.id} planilhaId={modal.planilha.id} cc={modal.cc} onFechar={fechar} />}
-              {modal.tipo === "pagamentos" && (
-                <PagamentosCliente obraId={obra.id} planilhas={planilhas} pagamentos={pagamentos} planilhaInicial={modal.planilha} podeLancar={podeFinanceiro} />
-              )}
-              {modal.tipo === "percentuais" && <Percentuais obraId={obra.id} planilha={modal.planilha} percentuais={percentuais} podeEditar={podeEstrutura} />}
-              {modal.tipo === "responsaveis" && <Responsaveis obraId={obra.id} responsaveis={responsaveis} perfis={perfis} podeEditar={ehAdmin} />}
-              {modal.tipo === "filiais" && <Filiais obraId={obra.id} filiais={filiais} clientes={clientes} podeEditar={podeEstrutura} />}
+              {modal.tipo === "caderno" && <CadernoNotas onFechar={fechar} />}
+              {modal.tipo === "relatorio" && <UploadArquivos rotulo="Arquivos:" colunas={["Arquivo", "Data Envio", ""]} onFechar={fechar} />}
+              {modal.tipo === "contrato" && <UploadArquivos colunas={["Arquivo", "Data", ""]} onFechar={fechar} />}
+              {modal.tipo === "alertas" && <ModalVazio colunas={["Nota", "Serie", "CC", "Descricao", "Valor Lançamento"]} />}
+              {modal.tipo === "semana" && <ModalVazio colunas={["Nota", "Serie", "Data Pagamento", "Usuário", "Obra", "Pedido", "Fornecedor", "Valor", "CC"]} rodape="Total: 0,00" />}
+              {modal.tipo === "editar" && <EditarPlanilha obra={obra} planilha={modal.planilha} onFechar={fechar} />}
+              {modal.tipo === "addcc" && <AdicionarCc obraId={obra.id} planilhaId={modal.planilha.id} pai={modal.pai} onFechar={fechar} />}
+              {modal.tipo === "detalhe" && <DetalheCc cc={modal.cc} />}
             </>
           )}
         </DialogContent>
       </Dialog>
-    </div>
+    </>
   );
 }
