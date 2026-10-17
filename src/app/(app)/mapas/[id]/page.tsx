@@ -1,142 +1,125 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/compras/status-badge";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
 import { createClient } from "@/lib/supabase/server";
-import { catalogoItens, opcoesFornecedores, opcoesObras } from "@/lib/compras/dados";
 import { getPerfil, podeComprar } from "@/lib/auth";
-import { moeda } from "@/lib/format";
-import { numeroMapa, numeroOC, numeroSolicitacao, STATUS_MAPA, STATUS_OC, type LinhaItem } from "@/lib/compras/tipos";
-import { MapaForm } from "../mapa-form";
-import { CotacaoEditor, type ItemMapa, type Participante } from "../cotacao-editor";
-import { AcoesMapa } from "./acoes";
+import { catalogoItens, opcoesFornecedores } from "@/lib/compras/dados";
+import { apropriacoesPorItem, ccsComSaldo, type MapaResumo } from "@/lib/mapas/dados";
+import { REGIME_ROTULO } from "@/lib/solicitacoes/dados";
+import { AvisoMapas } from "../aviso";
+import { TelaMapa, type ItemMapa } from "../tela-mapa";
+import type { FornecedorMapa } from "../grade-cotacao";
 
-export async function generateMetadata({ params }: PageProps<"/mapas/[id]">): Promise<Metadata> {
-  const id = Number((await params).id);
-  return { title: Number.isInteger(id) ? numeroMapa(id) : "Não encontrado" };
-}
+export const metadata: Metadata = { title: "Vizualizar Mapa" };
 
 export default async function MapaPage({ params }: PageProps<"/mapas/[id]">) {
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
 
   const supabase = await createClient();
-  const [perfil, obras, catalogo, fornecedores, { data: m }, { data: ocs }] = await Promise.all([
+  const [perfil, { data: m, error }, { data: itens }, { data: forn }, { data: arquivos }] = await Promise.all([
     getPerfil(),
-    opcoesObras(),
+    supabase.from("mapas_resumo").select("*").eq("id", id).maybeSingle(),
+    supabase.from("mapa_itens").select("*").eq("mapa_id", id).order("ordem"),
+    supabase.from("mapa_fornecedores").select("*, fornecedor:fornecedores(nome)").eq("mapa_id", id).order("id"),
+    supabase.from("mapa_arquivos").select("id, nome, enviado_em").eq("mapa_id", id).order("enviado_em"),
+  ]);
+  const topo = <CabecalhoPagina titulo="Vizualizar Mapa" migalhas={[{ titulo: "Pedidos", href: "/mapas" }, { titulo: "Mapas" }]} />;
+  if (error) {
+    return (
+      <>
+        {topo}
+        <AvisoMapas />
+      </>
+    );
+  }
+  if (!m) notFound();
+  const mapa = m as MapaResumo;
+
+  const ids = (itens ?? []).map((i) => i.id as number);
+  const [aprops, ccs, catalogo, opcoesForn, { data: precos }, { data: ocItens }, { data: solicitacoes }] = await Promise.all([
+    apropriacoesPorItem("mapa_item", ids),
+    ccsComSaldo(mapa.obra_id),
     catalogoItens(),
     opcoesFornecedores(),
-    supabase
-      .from("mapas")
-      .select("*, itens:mapa_itens(*, precos:mapa_precos(*)), participantes:mapa_fornecedores(*, fornecedor:fornecedores(nome))")
-      .eq("id", id)
-      .maybeSingle(),
-    supabase.from("ordens_compra_resumo").select("id, status, fornecedor_nome, valor_total").eq("mapa_id", id).order("id"),
+    ids.length ? supabase.from("mapa_precos").select("mapa_item_id, fornecedor_id, valor_unitario").in("mapa_item_id", ids) : Promise.resolve({ data: [] }),
+    ids.length
+      ? supabase.from("oc_itens").select("mapa_item_id, oc:ordens_compra!inner(status)").in("mapa_item_id", ids).neq("oc.status", "cancelada")
+      : Promise.resolve({ data: [] }),
+    supabase.from("solicitacoes").select("id, servico, criado_em").eq("obra_id", mapa.obra_id).order("id", { ascending: false }),
   ]);
-  if (!m) notFound();
 
-  const editavel = m.status === "aberto" && perfil.ativo && podeComprar(perfil.papel);
-  const itensOrdenados = [...(m.itens ?? [])].sort((a, b) => a.ordem - b.ordem);
-
-  const linhas: LinhaItem[] = itensOrdenados.map((i) => ({ ...i, chave: `i${i.id}` }));
-  const itensMapa: ItemMapa[] = itensOrdenados.map((i) => ({
+  const comPedido = new Set(((ocItens ?? []) as { mapa_item_id: number }[]).map((o) => o.mapa_item_id));
+  const lista: ItemMapa[] = (itens ?? []).map((i) => ({
     id: i.id,
-    descricao: i.descricao,
+    e_titulo: Boolean(i.e_titulo),
+    item_id: i.item_id,
     codigo: i.codigo,
+    descricao: i.descricao,
     quantidade: Number(i.quantidade),
     unidade: i.unidade,
-    fornecedor_vencedor_id: i.fornecedor_vencedor_id,
+    valor_medio: i.valor_medio == null ? null : Number(i.valor_medio),
+    apropriacoes: aprops.get(i.id) ?? [],
+    comPedido: comPedido.has(i.id),
   }));
-  const bloqueados = new Set(fornecedores.filter((f) => f.bloqueado).map((f) => Number(f.valor)));
-  const participantes: Participante[] = (m.participantes ?? []).map((p: Record<string, unknown> & { fornecedor: { nome: string } }) => ({
-    fornecedor_id: Number(p.fornecedor_id),
-    nome: p.fornecedor?.nome ?? `#${p.fornecedor_id}`,
-    bloqueado: bloqueados.has(Number(p.fornecedor_id)),
-    condicao_pagamento: String(p.condicao_pagamento ?? ""),
-    prazo_entrega: String(p.prazo_entrega ?? ""),
-    frete: p.frete ? String(p.frete) : "",
-    observacao: String(p.observacao ?? ""),
+  const fornecedores: FornecedorMapa[] = ((forn ?? []) as unknown as {
+    fornecedor_id: number;
+    frete: number;
+    impostos: number;
+    desconto: number;
+    condicao_pagamento: string | null;
+    prazo_entrega: string | null;
+    observacao: string | null;
+    fornecedor: { nome: string } | null;
+  }[]).map((f) => ({
+    fornecedor_id: f.fornecedor_id,
+    nome: f.fornecedor?.nome ?? String(f.fornecedor_id),
+    frete: Number(f.frete),
+    impostos: Number(f.impostos ?? 0),
+    desconto: Number(f.desconto ?? 0),
+    condicao_pagamento: f.condicao_pagamento ?? "",
+    prazo_entrega: f.prazo_entrega ?? "",
+    observacao: f.observacao ?? "",
   }));
-  const precos: Record<string, string> = {};
-  for (const i of itensOrdenados) for (const p of i.precos ?? []) precos[`${i.id}:${p.fornecedor_id}`] = String(p.valor_unitario);
-
-  const obraAtual = String(m.obra_id);
-  const opcoesObra = obras.some((o) => o.valor === obraAtual) ? obras : [...obras, { valor: obraAtual, rotulo: `Obra #${obraAtual}` }];
+  const mapaPrecos = Object.fromEntries(((precos ?? []) as { mapa_item_id: number; fornecedor_id: number; valor_unitario: number }[]).map((p) => [`${p.mapa_item_id}-${p.fornecedor_id}`, Number(p.valor_unitario)]));
+  const chave = `${mapa.status}-${mapa.regularizacao_engenharia}-${lista.map((i) => `${i.id}:${i.apropriacoes.map((a) => a.id).join(".")}:${i.quantidade}`).join(",")}`;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" render={<Link href="/mapas" />} aria-label="Voltar">
-            <ArrowLeft />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{numeroMapa(id)}</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <StatusBadge mapa={STATUS_MAPA} valor={m.status} />
-              {m.solicitacao_id && (
-                <Link href={`/solicitacoes/${m.solicitacao_id}`} className="hover:underline">
-                  Solicitação {numeroSolicitacao(m.solicitacao_id)}
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-        {editavel && <AcoesMapa id={id} />}
-      </div>
-
-      {ocs && ocs.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Ordens de compra geradas</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            {ocs.map((oc) => (
-              <Link key={oc.id} href={`/ordens-compra/${oc.id}`} className="rounded-md border p-3 text-sm hover:bg-muted/50">
-                <div className="font-mono text-xs">{numeroOC(oc.id)}</div>
-                <div className="font-medium">{oc.fornecedor_nome}</div>
-                <div className="flex items-center gap-2">
-                  <span className="tabular-nums">{moeda(Number(oc.valor_total))}</span>
-                  <StatusBadge mapa={STATUS_OC} valor={oc.status} />
-                </div>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      <MapaForm
-        key={`f-${m.atualizado_em}`}
-        id={id}
-        inicial={{
-          obra_id: obraAtual,
-          solicitacao_id: m.solicitacao_id ? String(m.solicitacao_id) : "",
-          servico: m.servico,
-          apropriacao: m.apropriacao ?? "",
-          tipo: m.tipo,
-          data_entrega: m.data_entrega ?? "",
-          prazo_locacao: m.prazo_locacao ?? "",
-          data_devolucao: m.data_devolucao ?? "",
-          observacao: m.observacao ?? "",
+    <>
+      {topo}
+      <TelaMapa
+        key={chave}
+        cabecalho={{
+          id: mapa.id,
+          status: mapa.status,
+          solicitante: mapa.solicitante_nome ?? "",
+          obra_id: mapa.obra_id,
+          obra_rotulo: `${mapa.obra_nome} - ${REGIME_ROTULO[mapa.obra_regime] ?? mapa.obra_regime}`,
+          numero_cliente: mapa.numero_cliente,
+          regularizacao_engenharia: mapa.regularizacao_engenharia,
+          dados: {
+            obra_id: String(mapa.obra_id),
+            servico: mapa.servico,
+            apropriacao: mapa.apropriacao ?? "",
+            observacao: mapa.observacao ?? "",
+            tipo: mapa.tipo ?? "",
+            data_entrega: mapa.data_entrega ?? "",
+            prazo_locacao: mapa.prazo_locacao ?? "",
+            data_devolucao: mapa.data_devolucao ?? "",
+          },
         }}
-        itensIniciais={linhas}
-        obras={opcoesObra}
+        itens={lista}
+        obras={[]}
         catalogo={catalogo}
-        editavel={editavel}
-      />
-
-      <CotacaoEditor
-        key={`c-${m.atualizado_em}-${itensMapa.length}`}
-        mapaId={id}
-        itens={itensMapa}
-        participantesIniciais={participantes}
-        precosIniciais={precos}
+        ccs={ccs}
         fornecedores={fornecedores}
-        editavel={editavel}
+        opcoesFornecedores={opcoesForn}
+        precos={mapaPrecos}
+        arquivos={(arquivos ?? []) as { id: number; nome: string; enviado_em: string }[]}
+        solicitacoesObra={(solicitacoes ?? []) as { id: number; servico: string; criado_em: string }[]}
+        podeMontar={perfil.ativo && ["admin", "engenharia", "suprimentos"].includes(perfil.papel)}
+        podeCotar={perfil.ativo && podeComprar(perfil.papel)}
       />
-    </div>
+    </>
   );
 }

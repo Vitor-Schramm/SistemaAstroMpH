@@ -15,7 +15,7 @@ import type { SolicitacaoResumo } from "@/lib/solicitacoes/dados";
 
 // "Solicitações de Compra": lista agrupada por cliente e lista das solicitações de um cliente.
 
-function BotoesTopo({ filtroAberto, onFiltro }: { filtroAberto: boolean; onFiltro: () => void }) {
+export function BotoesTopo({ filtroAberto, onFiltro, novoHref = "/solicitacoes/nova", novoTitulo = "Nova Solicitação" }: { filtroAberto: boolean; onFiltro: () => void; novoHref?: string; novoTitulo?: string }) {
   return (
     <div className="flex justify-end gap-[0.3rem] px-[1.5rem] pt-[1.5rem]">
       <button
@@ -28,8 +28,8 @@ function BotoesTopo({ filtroAberto, onFiltro }: { filtroAberto: boolean; onFiltr
         <Filter className="size-[14px]" />
       </button>
       <Link
-        href="/solicitacoes/nova"
-        title="Nova Solicitação"
+        href={novoHref}
+        title={novoTitulo}
         className="flex size-[38px] items-center justify-center rounded-[0.358rem] bg-primary text-white hover:shadow-[0_8px_25px_-8px_var(--primary)]"
       >
         <Plus className="size-[14px]" />
@@ -38,10 +38,20 @@ function BotoesTopo({ filtroAberto, onFiltro }: { filtroAberto: boolean; onFiltr
   );
 }
 
-type Filtro = { obra: string; status: string; inicio: string; fim: string };
-const FILTRO_VAZIO: Filtro = { obra: "", status: "", inicio: "", fim: "" };
+export type Filtro = { obra: string; status: string; inicio: string; fim: string };
+export const FILTRO_VAZIO: Filtro = { obra: "", status: "", inicio: "", fim: "" };
 
-function PainelFiltro({ obras, valor, onChange }: { obras: { valor: string; rotulo: string }[]; valor: Filtro; onChange: (f: Filtro) => void }) {
+export function PainelFiltro({
+  obras,
+  valor,
+  onChange,
+  status = STATUS_SOLICITACAO,
+}: {
+  obras: { valor: string; rotulo: string }[];
+  valor: Filtro;
+  onChange: (f: Filtro) => void;
+  status?: Record<string, { rotulo: string }>;
+}) {
   return (
     <div className="grid gap-x-[1.5rem] px-[1.5rem] pt-[1rem] md:grid-cols-4">
       <Campo rotulo="Obra" htmlFor="f-obra">
@@ -57,7 +67,7 @@ function PainelFiltro({ obras, valor, onChange }: { obras: { valor: string; rotu
       <Campo rotulo="Status" htmlFor="f-status">
         <select id="f-status" value={valor.status} onChange={(e) => onChange({ ...valor, status: e.target.value })} className={selectClass}>
           <option value="">Todos</option>
-          {Object.entries(STATUS_SOLICITACAO).map(([v, s]) => (
+          {Object.entries(status).map(([v, s]) => (
             <option key={v} value={v}>
               {s.rotulo}
             </option>
