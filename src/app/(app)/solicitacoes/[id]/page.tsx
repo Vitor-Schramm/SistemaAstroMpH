@@ -11,7 +11,8 @@ import { TelaSolicitacao, type Apropriacao, type CcSaldo, type ItemSolicitacao }
 
 export const metadata: Metadata = { title: "Vizualizar Solicitação" };
 
-const NIVEIS_LANCAVEIS = ["CC", "ADM", "I"];
+// Só centros de custo comuns recebem apropriação (Administração e Impostos ficam no Resumo Administração).
+const NIVEIS_LANCAVEIS = ["CC"];
 
 export default async function SolicitacaoPage({ params }: PageProps<"/solicitacoes/[id]">) {
   const id = Number((await params).id);
