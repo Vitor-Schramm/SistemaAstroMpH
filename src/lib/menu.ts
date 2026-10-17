@@ -1,68 +1,72 @@
-import {
-  BadgeCheck,
-  Ban,
-  Building2,
-  ClipboardList,
-  FileCheck2,
-  FilePlus2,
-  FileSearch,
-  HandCoins,
-  Handshake,
-  LayoutDashboard,
-  Map,
-  Package,
-  PiggyBank,
-  Receipt,
-  ReceiptText,
-  ShoppingCart,
-  Truck,
-  Users,
-  Wallet,
-  type LucideIcon,
-} from "lucide-react";
+// Menu lateral idêntico ao do AstroTools: mesmos rótulos, ordem, grupos, submenus e ícones (feather → lucide).
 
-export type ItemMenu = { titulo: string; href: string; icone: LucideIcon; emBreve?: boolean };
-export type GrupoMenu = { titulo: string; itens: ItemMenu[] };
+export type IconeMenu = "home" | "grid" | "circle" | "align-justify" | "file-text" | "database";
 
-// Estrutura espelhada do sistema atual. Itens "emBreve" ainda não foram implementados.
-export const MENU: GrupoMenu[] = [
+export type ItemMenu = {
+  titulo: string;
+  href?: string;
+  icone: IconeMenu;
+  badge?: string;
+  /** Rotas que também marcam o item como ativo (telas de detalhe). */
+  ativoEm?: string[];
+  sub?: { titulo: string; href: string; ativoEm?: string[] }[];
+};
+
+export type EntradaMenu = ItemMenu | { cabecalho: string };
+
+export const MENU: EntradaMenu[] = [
   {
     titulo: "Dashboards",
-    itens: [
-      { titulo: "Início", href: "/", icone: LayoutDashboard },
-      { titulo: "Financeiro", href: "/financeiro", icone: Wallet },
+    icone: "home",
+    badge: "1",
+    sub: [
+      { titulo: "Analítico", href: "/" },
+      { titulo: "Financeiro", href: "/financeiro" },
+    ],
+  },
+  { cabecalho: "Administrativo" },
+  { titulo: "Obras", href: "/obras", icone: "grid" },
+  { titulo: "Solicitações", href: "/solicitacoes", icone: "circle" },
+  { titulo: "Mapas", href: "/mapas", icone: "circle" },
+  { titulo: "Ordem Compra", href: "/ordens-compra", icone: "circle" },
+  { titulo: "Ordem Reembolso", href: "/ordens-reembolso", icone: "circle" },
+  { titulo: "Aprovação OC", href: "/aprovacao-oc", icone: "circle" },
+  {
+    titulo: "Anexar OC x NF",
+    icone: "align-justify",
+    sub: [
+      { titulo: "NF's Fase Cinza", href: "/notas/nova?fase=cinza", ativoEm: ["/notas/nova"] },
+      { titulo: "NF's Fase Azul", href: "/notas/nova?fase=azul" },
     ],
   },
   {
-    titulo: "Compras",
-    itens: [
-      { titulo: "Obras", href: "/obras", icone: Building2 },
-      { titulo: "Solicitações", href: "/solicitacoes", icone: ClipboardList },
-      { titulo: "Mapas", href: "/mapas", icone: Map },
-      { titulo: "Ordem Compra", href: "/ordens-compra", icone: ShoppingCart },
-      { titulo: "Ordem Reembolso", href: "/ordens-reembolso", icone: HandCoins },
-      { titulo: "Aprovação OC", href: "/aprovacao-oc", icone: BadgeCheck },
+    titulo: "Notas Fase Cinza",
+    icone: "align-justify",
+    sub: [
+      { titulo: "Pendentes", href: "/notas-cinza" },
+      { titulo: "Pagas", href: "/notas-cinza?situacao=pagas" },
+      { titulo: "Aprovação NF", href: "/aprovacao-nf" },
     ],
   },
   {
-    titulo: "Notas e pagamentos",
-    itens: [
-      { titulo: "Anexar OC x NF", href: "/notas/nova", icone: FilePlus2 },
-      { titulo: "Aprovação NF", href: "/aprovacao-nf", icone: FileCheck2 },
-      { titulo: "Notas Fase Cinza", href: "/notas-cinza", icone: Receipt },
-      { titulo: "Notas Fase Azul", href: "/notas-azul", icone: ReceiptText },
-      { titulo: "Guias Adm", href: "/guias-adm", icone: Handshake },
-      { titulo: "Verbas das obras", href: "/verbas", icone: PiggyBank },
-      { titulo: "Consultas", href: "/consultas", icone: FileSearch },
+    titulo: "Notas Fase Azul",
+    icone: "align-justify",
+    sub: [
+      { titulo: "Pendentes", href: "/notas-azul" },
+      { titulo: "Pagas", href: "/notas-azul?situacao=pagas" },
     ],
   },
+  { titulo: "Guias Adm", href: "/guias-adm", icone: "align-justify" },
+  { titulo: "Consultas", href: "/consultas", icone: "file-text" },
+  { cabecalho: "Cadastros" },
   {
-    titulo: "Cadastros Gerais",
-    itens: [
-      { titulo: "Clientes", href: "/clientes", icone: Users },
-      { titulo: "Fornecedores", href: "/fornecedores", icone: Truck },
-      { titulo: "Fornecedores Bloqueados", href: "/fornecedores-bloqueados", icone: Ban },
-      { titulo: "Itens / Materiais", href: "/itens", icone: Package },
+    titulo: "Cadastro Gerais",
+    icone: "database",
+    sub: [
+      { titulo: "Clientes", href: "/clientes" },
+      { titulo: "Fornecedores", href: "/fornecedores" },
+      { titulo: "Fornecedores Bloqueados", href: "/fornecedores-bloqueados" },
     ],
   },
+  { cabecalho: "RH" },
 ];
