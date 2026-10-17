@@ -42,6 +42,7 @@ export function TabelaDados<T>({
   nomeArquivo = "dados",
   porPaginaInicial = 10,
   vazio = "Nenhum registro encontrado",
+  exportar = true,
 }: {
   colunas: ColunaTabela<T>[];
   linhas: T[];
@@ -49,6 +50,8 @@ export function TabelaDados<T>({
   nomeArquivo?: string;
   porPaginaInicial?: number;
   vazio?: string;
+  /** O original esconde o botão Exportar em algumas telas (ex.: listas agrupadas). */
+  exportar?: boolean;
 }) {
   const [porPagina, setPorPagina] = useState(porPaginaInicial);
   const [busca, setBusca] = useState("");
@@ -129,6 +132,7 @@ export function TabelaDados<T>({
               className="h-[38px] w-[200px] rounded-[0.357rem] border border-input bg-card px-[1rem] text-[1rem] outline-none placeholder:text-muted-foreground focus:border-primary"
             />
           </label>
+          {exportar && (
           <DropdownMenu>
             <DropdownMenuTrigger className="flex h-[38px] items-center gap-2 rounded-[0.358rem] border border-[#82868b] px-[1.5rem] text-[1rem] text-[#82868b] hover:bg-[rgba(130,134,139,0.04)]">
               <ExternalLink className="size-[14px]" /> Exportar
@@ -157,6 +161,7 @@ export function TabelaDados<T>({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
         </div>
       </div>
 

@@ -1,26 +1,17 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { getPerfil, podeComprar } from "@/lib/auth";
-import { ListaSolicitacoes, type LinhaSolicitacao } from "./lista";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { carregarSolicitacoes } from "@/lib/solicitacoes/dados";
+import { AvisoMigracao } from "./aviso";
+import { GrupoSolicitacoes } from "./listas";
 
 export const metadata: Metadata = { title: "Solicitações" };
 
 export default async function SolicitacoesPage() {
-  const [perfil, supabase] = await Promise.all([getPerfil(), createClient()]);
-  const { data, error } = await supabase
-    .from("solicitacoes")
-    .select(
-      "id, servico, status, criado_em, solicitante_id, obra:obras(codigo, nome, cliente:clientes!cliente_id(nome)), solicitante:perfis(nome), itens:solicitacao_itens(count)",
-    )
-    .order("id", { ascending: false })
-    .limit(2000);
-  if (error) throw new Error(error.message);
-
+  const solicitacoes = await carregarSolicitacoes();
   return (
-    <ListaSolicitacoes
-      linhas={(data ?? []) as unknown as LinhaSolicitacao[]}
-      podeComprar={perfil.ativo && podeComprar(perfil.papel)}
-      usuarioId={perfil.id}
-    />
+    <>
+      <CabecalhoPagina titulo="Solicitações" migalhas={[{ titulo: "Pedidos" }, { titulo: "Solicitações" }]} />
+      {solicitacoes ? <GrupoSolicitacoes solicitacoes={solicitacoes} /> : <AvisoMigracao />}
+    </>
   );
 }

@@ -17,13 +17,15 @@ export type LinhaItem = {
 };
 
 export const STATUS_SOLICITACAO: Record<string, { rotulo: string; tom: Tom }> = {
-  pendente: { rotulo: "Pendente", tom: "alerta" },
-  em_cotacao: { rotulo: "Em cotação", tom: "info" },
-  atendida: { rotulo: "Atendida", tom: "ok" },
+  pendente: { rotulo: "Em Solicitação", tom: "alerta" },
+  em_cotacao: { rotulo: "Em Cotação", tom: "info" },
+  atendida: { rotulo: "Concluída", tom: "ok" },
   cancelada: { rotulo: "Cancelada", tom: "neutro" },
 };
 
 export const STATUS_MAPA: Record<string, { rotulo: string; tom: Tom }> = {
+  digitacao: { rotulo: "Digitação", tom: "alerta" },
+  cotacao: { rotulo: "Cotação", tom: "info" },
   aberto: { rotulo: "Aberto", tom: "info" },
   finalizado: { rotulo: "Finalizado", tom: "ok" },
   cancelado: { rotulo: "Cancelado", tom: "neutro" },

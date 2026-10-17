@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
-import { catalogoItens, opcoesObras } from "@/lib/compras/dados";
-import { getPerfil } from "@/lib/auth";
-import { SolicitacaoForm } from "../solicitacao-form";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { catalogoItens } from "@/lib/compras/dados";
+import { obrasSelect } from "@/lib/solicitacoes/dados";
+import { TelaSolicitacao } from "../tela-solicitacao";
 
-export const metadata: Metadata = { title: "Nova solicitação" };
+export const metadata: Metadata = { title: "Adicionar Solicitação" };
 
 export default async function NovaSolicitacaoPage() {
-  const [perfil, obras, catalogo] = await Promise.all([getPerfil(), opcoesObras(), catalogoItens()]);
+  const [obras, catalogo] = await Promise.all([obrasSelect(), catalogoItens()]);
   return (
-    <SolicitacaoForm
-      id={null}
-      inicial={{ obra_id: "", servico: "", observacao: "" }}
-      itensIniciais={[]}
-      obras={obras}
-      catalogo={catalogo}
-      editavel={perfil.ativo}
-      podeGerarMapa={false}
-    />
+    <>
+      <CabecalhoPagina titulo="Adicionar Solicitação" migalhas={[{ titulo: "Pedidos", href: "/solicitacoes" }, { titulo: "Solicitações" }]} />
+      <TelaSolicitacao cabecalho={null} itens={[]} obras={obras} catalogo={catalogo} ccs={[]} outras={[]} podeEditar />
+    </>
   );
 }
