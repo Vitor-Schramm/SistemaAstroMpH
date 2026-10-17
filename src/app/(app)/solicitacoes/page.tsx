@@ -10,7 +10,7 @@ export default async function SolicitacoesPage() {
   const { data, error } = await supabase
     .from("solicitacoes")
     .select(
-      "id, servico, status, criado_em, solicitante_id, obra:obras(codigo, nome, cliente:clientes(nome)), solicitante:perfis(nome), itens:solicitacao_itens(count)",
+      "id, servico, status, criado_em, solicitante_id, obra:obras(codigo, nome, cliente:clientes!cliente_id(nome)), solicitante:perfis(nome), itens:solicitacao_itens(count)",
     )
     .order("id", { ascending: false })
     .limit(2000);

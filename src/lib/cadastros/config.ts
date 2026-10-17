@@ -97,7 +97,7 @@ export const ENTIDADES: Record<string, Entidade> = {
     feminino: true,
     descricao: "Listagem e cadastro de obras",
     ordem: "codigo",
-    select: "*, cliente:clientes(nome)",
+    select: "*, cliente:clientes!cliente_id(nome)",
     busca: ["codigo", "nome", "engenheiro"],
     campos: [
       { nome: "codigo", rotulo: "Código", tipo: "text", obrigatorio: true, secao: "Identificação" },

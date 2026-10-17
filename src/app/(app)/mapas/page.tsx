@@ -10,7 +10,7 @@ export default async function MapasPage() {
   const { data, error } = await supabase
     .from("mapas")
     .select(
-      "id, servico, status, tipo, solicitacao_id, criado_em, obra:obras(codigo, nome, cliente:clientes(nome)), itens:mapa_itens(count), fornecedores:mapa_fornecedores(count)",
+      "id, servico, status, tipo, solicitacao_id, criado_em, obra:obras(codigo, nome, cliente:clientes!cliente_id(nome)), itens:mapa_itens(count), fornecedores:mapa_fornecedores(count)",
     )
     .order("id", { ascending: false })
     .limit(2000);

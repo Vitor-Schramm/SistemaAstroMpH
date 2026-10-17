@@ -24,7 +24,7 @@ export default async function ObraPage({ params }: PageProps<"/obras/[id]">) {
   const [perfil, { data: obra }, planilhasR, { data: ccs }, { data: pagamentos }, { data: percentuais }, { data: responsaveis }, { data: filiais }, { data: perfis }, { data: clientes }] =
     await Promise.all([
       getPerfil(),
-      supabase.from("obras").select("*, cliente:clientes(nome)").eq("id", id).maybeSingle(),
+      supabase.from("obras").select("*, cliente:clientes!cliente_id(nome)").eq("id", id).maybeSingle(),
       supabase.from("planilhas_resumo").select("*").eq("obra_id", id).order("seq"),
       supabase.from("centros_custo_saldos").select("*").eq("obra_id", id),
       supabase.from("pagamentos_cliente").select("*").eq("obra_id", id).order("data", { ascending: false }),
