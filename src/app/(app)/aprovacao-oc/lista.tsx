@@ -1,171 +1,170 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { TriangleAlert } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Cartao, Campo } from "@/components/astro/basicos";
+import { TabelaDados, type ColunaTabela } from "@/components/astro/tabela-dados";
 import { selectClass } from "@/components/cadastros/registro-form";
-import { Aprovacao } from "@/components/compras/aprovacao-icone";
-import { DecisaoOc } from "@/components/compras/decisao-oc";
-import { data as fmtData, moeda } from "@/lib/format";
-import { numeroOC } from "@/lib/compras/tipos";
+import { liberarOc } from "@/lib/ocs/actions";
+import type { OcResumo } from "@/lib/ocs/dados";
 
-type Papel = "engenharia" | "financeiro";
+// "Aprovação de OC com Pendência" do AstroTools (liberação de OCs com pendência de consistência).
 
-export type LinhaAprovacao = {
-  id: number;
-  data_emissao: string;
-  obra_id: number;
-  obra_codigo: string;
-  obra_nome: string;
-  cliente_nome: string | null;
-  fornecedor_id: number;
-  fornecedor_nome: string;
-  engenheiro_responsavel: string | null;
-  valor_total: number;
-  aprovado_engenharia: boolean | null;
-  aprovado_financeiro: boolean | null;
-  fornecedor_bloqueado: boolean;
-};
+type Opcao = { valor: string; rotulo: string };
+const real = (v: number) => `R$ ${Number(v).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-const pendentesDe = (l: LinhaAprovacao): Papel[] =>
-  [l.aprovado_engenharia == null && "engenharia", l.aprovado_financeiro == null && "financeiro"].filter(Boolean) as Papel[];
+export function AprovacaoOc({ ocs, obras, fornecedores, podeDecidir }: { ocs: OcResumo[]; obras: Opcao[]; fornecedores: Opcao[]; podeDecidir: boolean }) {
+  const router = useRouter();
+  const [f, setF] = useState({ obra: "", fornecedor: "", inicio: "", fim: "", perfil: "" });
+  const [resultado, setResultado] = useState<OcResumo[] | null>(null);
+  const [decisao, setDecisao] = useState<{ oc: OcResumo; liberar: boolean } | null>(null);
+  const [justificativa, setJustificativa] = useState("");
+  const [pending, startTransition] = useTransition();
 
-export function ListaAprovacao({ linhas, meusPapeis, admin }: { linhas: LinhaAprovacao[]; meusPapeis: Papel[]; admin: boolean }) {
-  const [obra, setObra] = useState("");
-  const [fornecedor, setFornecedor] = useState("");
-  const [de, setDe] = useState("");
-  const [ate, setAte] = useState("");
-  const [perfil, setPerfil] = useState<string>(admin ? "" : (meusPapeis[0] ?? ""));
+  const filtrar = () => {
+    if (!f.perfil) return void toast.error("Selecione o Perfil.");
+    setResultado(
+      ocs.filter(
+        (o) =>
+          (!f.obra || String(o.obra_id) === f.obra) &&
+          (!f.fornecedor || String(o.fornecedor_id) === f.fornecedor) &&
+          (!f.inicio || o.data_emissao >= f.inicio) &&
+          (!f.fim || o.data_emissao <= f.fim),
+      ),
+    );
+  };
 
-  const obras = useMemo(() => [...new Map(linhas.map((l) => [l.obra_id, `${l.obra_codigo} — ${l.obra_nome}`])).entries()], [linhas]);
-  const fornecedores = useMemo(() => [...new Map(linhas.map((l) => [l.fornecedor_id, l.fornecedor_nome])).entries()], [linhas]);
-
-  const filtradas = linhas.filter((l) => {
-    if (obra && String(l.obra_id) !== obra) return false;
-    if (fornecedor && String(l.fornecedor_id) !== fornecedor) return false;
-    if (de && l.data_emissao < de) return false;
-    if (ate && l.data_emissao > ate) return false;
-    if (perfil && !pendentesDe(l).includes(perfil as Papel)) return false;
-    return true;
-  });
-
-  const total = filtradas.reduce((s, l) => s + Number(l.valor_total), 0);
+  const colunas: ColunaTabela<OcResumo>[] = [
+    { chave: "num", titulo: "Nº OC", valor: (o) => o.numero_cliente ?? o.id, className: "font-semibold" },
+    { chave: "serv", titulo: "Serviço", valor: (o) => o.nome ?? "" },
+    { chave: "forn", titulo: "Fornecedor", valor: (o) => o.fornecedor_fantasia || o.fornecedor_nome },
+    { chave: "saldo", titulo: "Saldo", valor: (o) => Number(o.saldo), render: (o) => real(o.saldo), className: "whitespace-nowrap" },
+    { chave: "obra", titulo: "Obra", valor: (o) => o.obra_nome },
+    { chave: "pend", titulo: "Pendência", valor: (o) => o.pendencia ?? "", className: "max-w-[22rem] text-[0.9rem] whitespace-normal" },
+    {
+      chave: "acoes",
+      titulo: "Ações",
+      valor: () => "",
+      exportar: false,
+      ordenavel: false,
+      render: (o) => (
+        <span className="flex items-center gap-[0.5rem] whitespace-nowrap">
+          <Link href={`/ordens-compra/${o.id}`} title="Abrir OC" className="text-[#00cfe8]">
+            <Search className="size-[14px]" />
+          </Link>
+          {podeDecidir && (
+            <>
+              <Button size="sm" onClick={() => setDecisao({ oc: o, liberar: true })}>
+                Liberar Pedido
+              </Button>
+              <Button size="sm" variant="outline" className="border-[#ea5455] text-[#ea5455]" onClick={() => setDecisao({ oc: o, liberar: false })}>
+                Bloquear Pedido
+              </Button>
+            </>
+          )}
+        </span>
+      ),
+    },
+  ];
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Aprovação de OC</h1>
-        <p className="text-sm text-muted-foreground">
-          {filtradas.length} OC(s) aguardando · {moeda(total)}
-          {meusPapeis.length === 0 && " · Seu perfil não aprova OCs (somente leitura)."}
-        </p>
+    <Cartao>
+      <div className="border-b border-border px-[1.5rem] py-[1.5rem]">
+        <h4 className="mb-0 text-[1.285rem] font-medium">Aprovação de OC com Pendência</h4>
       </div>
+      <div className="px-[1.5rem] pt-[1.5rem]">
+        <div className="grid gap-x-[2rem] md:grid-cols-2">
+          <Campo rotulo="Obra" htmlFor="ap-obra">
+            <select id="ap-obra" value={f.obra} onChange={(e) => setF({ ...f, obra: e.target.value })} className={selectClass}>
+              <option value="">Selecione uma Obra</option>
+              {obras.map((o) => (
+                <option key={o.valor} value={o.valor}>
+                  {o.rotulo}
+                </option>
+              ))}
+            </select>
+          </Campo>
+          <Campo rotulo="Fornecedor" htmlFor="ap-forn">
+            <select id="ap-forn" value={f.fornecedor} onChange={(e) => setF({ ...f, fornecedor: e.target.value })} className={selectClass}>
+              <option value="">Selecione um Fornecedor</option>
+              {fornecedores.map((o) => (
+                <option key={o.valor} value={o.valor}>
+                  {o.rotulo}
+                </option>
+              ))}
+            </select>
+          </Campo>
+        </div>
+        <div className="grid gap-x-[2rem] md:grid-cols-[4fr_4fr_2fr]">
+          <Campo rotulo="Data Inicial OC" htmlFor="ap-ini">
+            <Input id="ap-ini" type="date" value={f.inicio} onChange={(e) => setF({ ...f, inicio: e.target.value })} />
+          </Campo>
+          <Campo rotulo="Data Final OC" htmlFor="ap-fim">
+            <Input id="ap-fim" type="date" value={f.fim} onChange={(e) => setF({ ...f, fim: e.target.value })} />
+          </Campo>
+          <Campo rotulo="Perfil *" htmlFor="ap-perfil">
+            <select id="ap-perfil" value={f.perfil} onChange={(e) => setF({ ...f, perfil: e.target.value })} className={selectClass}>
+              <option value="">Selecione</option>
+              <option value="Cordenação">Cordenação</option>
+              <option value="Engenharia">Engenharia</option>
+            </select>
+          </Campo>
+        </div>
+        <div className="pb-[1.5rem]">
+          <Button onClick={filtrar}>Filtrar</Button>
+        </div>
+      </div>
+      {resultado && (
+        <div className="border-t border-border">
+          <TabelaDados colunas={colunas} linhas={resultado} chave={(o) => o.id} nomeArquivo="aprovacao-oc" />
+        </div>
+      )}
 
-      <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-5">
-        <div className="grid gap-1.5 sm:col-span-2">
-          <Label htmlFor="f-obra">Obra</Label>
-          <select id="f-obra" value={obra} onChange={(e) => setObra(e.target.value)} className={selectClass}>
-            <option value="">Todas</option>
-            {obras.map(([id, r]) => (
-              <option key={id} value={id}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid gap-1.5 sm:col-span-2">
-          <Label htmlFor="f-forn">Fornecedor</Label>
-          <select id="f-forn" value={fornecedor} onChange={(e) => setFornecedor(e.target.value)} className={selectClass}>
-            <option value="">Todos</option>
-            {fornecedores.map(([id, r]) => (
-              <option key={id} value={id}>
-                {r}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="f-perfil">Pendente para</Label>
-          <select id="f-perfil" value={perfil} onChange={(e) => setPerfil(e.target.value)} className={selectClass}>
-            <option value="">Qualquer perfil</option>
-            <option value="engenharia">Engenharia</option>
-            <option value="financeiro">Financeiro</option>
-          </select>
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="f-de">Emissão de</Label>
-          <Input id="f-de" type="date" value={de} onChange={(e) => setDe(e.target.value)} />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="f-ate">até</Label>
-          <Input id="f-ate" type="date" value={ate} onChange={(e) => setAte(e.target.value)} />
-        </div>
-      </div>
-
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>OC</TableHead>
-              <TableHead>Emissão</TableHead>
-              <TableHead>Obra</TableHead>
-              <TableHead>Fornecedor</TableHead>
-              <TableHead className="text-right">Valor</TableHead>
-              <TableHead className="text-center">Eng.</TableHead>
-              <TableHead className="text-center">Fin.</TableHead>
-              <TableHead className="w-56" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtradas.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                  Nenhuma OC aguardando aprovação com esses filtros.
-                </TableCell>
-              </TableRow>
-            )}
-            {filtradas.map((l) => {
-              const pend = pendentesDe(l);
-              const papeis = admin ? meusPapeis : meusPapeis.filter((p) => pend.includes(p));
-              return (
-                <TableRow key={l.id}>
-                  <TableCell className="font-mono text-xs">
-                    <Link href={`/ordens-compra/${l.id}`} className="hover:underline">
-                      {numeroOC(l.id)}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{fmtData(l.data_emissao)}</TableCell>
-                  <TableCell>
-                    {l.obra_codigo} — {l.obra_nome}
-                    {l.engenheiro_responsavel && <div className="text-xs text-muted-foreground">Eng.: {l.engenheiro_responsavel}</div>}
-                  </TableCell>
-                  <TableCell>
-                    {l.fornecedor_nome}
-                    {l.fornecedor_bloqueado && (
-                      <span className="ml-1 inline-flex items-center gap-0.5 text-xs text-destructive">
-                        <TriangleAlert className="size-3" /> bloqueado
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{moeda(Number(l.valor_total))}</TableCell>
-                  <TableCell className="text-center">
-                    <Aprovacao valor={l.aprovado_engenharia} />
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Aprovacao valor={l.aprovado_financeiro} />
-                  </TableCell>
-                  <TableCell>
-                    <DecisaoOc ocId={l.id} papeis={papeis} pendentes={pend} compacto />
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+      <Dialog open={decisao !== null} onOpenChange={(o) => !o && setDecisao(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="text-[1.285rem] font-medium text-heading">{decisao?.liberar ? "Liberar Pedido" : "Bloquear Pedido"}</DialogTitle>
+          </DialogHeader>
+          {decisao && (
+            <div>
+              <p className="mb-[0.75rem]">
+                OC {decisao.oc.numero_cliente ?? decisao.oc.id} — {decisao.oc.nome} ({decisao.oc.fornecedor_fantasia || decisao.oc.fornecedor_nome})
+              </p>
+              <Campo rotulo="Justificativa" htmlFor="ap-just">
+                <Textarea id="ap-just" rows={3} value={justificativa} onChange={(e) => setJustificativa(e.target.value)} />
+              </Campo>
+              <div className="flex gap-[0.5rem]">
+                <Button
+                  disabled={pending}
+                  onClick={() =>
+                    startTransition(async () => {
+                      const r = await liberarOc(decisao.oc.id, decisao.liberar, f.perfil, justificativa);
+                      if (!r.ok) return void toast.error(r.erro);
+                      toast.success(decisao.liberar ? "Pedido liberado." : "Pedido bloqueado.");
+                      setResultado((lista) => lista?.filter((o) => o.id !== decisao.oc.id) ?? null);
+                      setDecisao(null);
+                      setJustificativa("");
+                      router.refresh();
+                    })
+                  }
+                >
+                  Confirmar
+                </Button>
+                <Button variant="outline" onClick={() => setDecisao(null)}>
+                  Voltar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Cartao>
   );
 }

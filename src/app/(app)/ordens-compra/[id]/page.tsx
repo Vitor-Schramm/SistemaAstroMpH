@@ -1,132 +1,143 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatusBadge } from "@/components/compras/status-badge";
-import { Aprovacao } from "@/components/compras/aprovacao-icone";
-import { DecisaoOc } from "@/components/compras/decisao-oc";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
 import { createClient } from "@/lib/supabase/server";
-import { catalogoItens, opcoesFornecedores, opcoesObras } from "@/lib/compras/dados";
-import { getPerfil, papeisAprovador, podeComprar } from "@/lib/auth";
-import { dataHora } from "@/lib/format";
-import { numeroMapa, numeroOC, STATUS_OC, type LinhaItem } from "@/lib/compras/tipos";
-import { OcForm } from "../oc-form";
-import { AcoesOc } from "./acoes";
+import { getPerfil } from "@/lib/auth";
+import { catalogoItens } from "@/lib/compras/dados";
+import { ccsComSaldo } from "@/lib/mapas/dados";
+import { REGIME_ROTULO } from "@/lib/solicitacoes/dados";
+import type { OcResumo } from "@/lib/ocs/dados";
+import { AvisoOcs } from "../aviso";
+import { TelaOc, type AproOc, type ItemOc, type NotaOc } from "../tela-oc";
 
-type AprovacaoRow = { papel: "engenharia" | "financeiro"; aprovado: boolean; justificativa: string | null; decidido_em: string; usuario: { nome: string } | null };
-
-export async function generateMetadata({ params }: PageProps<"/ordens-compra/[id]">): Promise<Metadata> {
-  const id = Number((await params).id);
-  return { title: Number.isInteger(id) ? numeroOC(id) : "Não encontrado" };
-}
+export const metadata: Metadata = { title: "Vizualizar Ordem" };
 
 export default async function OcPage({ params }: PageProps<"/ordens-compra/[id]">) {
   const id = Number((await params).id);
   if (!Number.isInteger(id)) notFound();
 
   const supabase = await createClient();
-  const [perfil, obras, fornecedores, catalogo, { data: oc }] = await Promise.all([
+  const [perfil, catalogo, { data: r, error }, { data: oc }, { data: itens }, { data: aprops }, { data: notas }, { data: arquivos }, { data: just }] = await Promise.all([
     getPerfil(),
-    opcoesObras(),
-    opcoesFornecedores(),
     catalogoItens(),
-    supabase
-      .from("ordens_compra")
-      .select("*, itens:oc_itens(*), aprovacoes:oc_aprovacoes(papel, aprovado, justificativa, decidido_em, usuario:perfis(nome))")
-      .eq("id", id)
-      .maybeSingle(),
+    supabase.from("ocs_resumo").select("*").eq("id", id).maybeSingle(),
+    supabase.from("ordens_compra").select("*, filial:clientes!filial_cliente_id(nome)").eq("id", id).maybeSingle(),
+    supabase.from("oc_itens").select("*, item:itens(valor_medio)").eq("ordem_compra_id", id).order("ordem"),
+    supabase.from("apropriacoes_detalhe").select("id, cc_codigo, cc_descricao, valor, saldo_ref").eq("origem", "oc").eq("origem_id", id).order("id"),
+    supabase.from("notas_resumo").select("id, numero, serie, valor, pago_em, status, fase, fornecedor_nome, pago_por_nome, vencimento, guia_id").eq("ordem_compra_id", id).neq("status", "cancelada"),
+    supabase.from("oc_arquivos").select("id, nome, enviado_em").eq("ordem_compra_id", id).order("enviado_em"),
+    supabase.from("oc_justificativas").select("id, status, justificativa, criado_em, usuario:perfis(nome)").eq("ordem_compra_id", id).order("criado_em"),
   ]);
-  if (!oc) notFound();
+  const topo = <CabecalhoPagina titulo="Vizualizar Ordem" migalhas={[{ titulo: "Ordens Compra", href: "/ordens-compra" }]} />;
+  if (error) {
+    return (
+      <>
+        {topo}
+        <AvisoOcs />
+      </>
+    );
+  }
+  if (!r || !oc) notFound();
+  const res = r as OcResumo;
+  const ccs = await ccsComSaldo(res.obra_id);
 
-  const compras = perfil.ativo && podeComprar(perfil.papel);
-  const editavel = compras && (oc.status === "rascunho" || oc.status === "reprovada");
-  const aprovacoes = (oc.aprovacoes ?? []) as AprovacaoRow[];
-  const decisao = (p: "engenharia" | "financeiro") => aprovacoes.find((a) => a.papel === p);
-  const pendentes = (["engenharia", "financeiro"] as const).filter((p) => !decisao(p));
-  const meusPapeis = perfil.ativo ? papeisAprovador(perfil.papel) : [];
-  // Não-admin só decide se o próprio papel ainda não decidiu.
-  const papeisDisponiveis = perfil.papel === "admin" ? meusPapeis : meusPapeis.filter((p) => pendentes.includes(p));
-
-  const itens: LinhaItem[] = [...(oc.itens ?? [])].sort((a, b) => a.ordem - b.ordem).map((i) => ({ ...i, chave: `i${i.id}` }));
-
-  const garantir = <T extends { valor: string }>(lista: T[], valor: string, extra: T) => (lista.some((o) => o.valor === valor) ? lista : [...lista, extra]);
-  const obraAtual = String(oc.obra_id);
-  const fornAtual = String(oc.fornecedor_id);
+  const lista: ItemOc[] = ((itens ?? []) as unknown as (ItemOc & { item: { valor_medio: number | null } | null })[]).map((i) => ({
+    id: i.id,
+    e_titulo: Boolean(i.e_titulo),
+    item_id: i.item_id,
+    codigo: i.codigo,
+    descricao: i.descricao,
+    quantidade: Number(i.quantidade),
+    unidade: i.unidade,
+    valor_unitario: Number(i.valor_unitario),
+    valor_impostos: Number(i.valor_impostos ?? 0),
+    valor_medio: i.item?.valor_medio == null ? null : Number(i.item.valor_medio),
+  }));
+  const s = (v: unknown) => (v == null ? "" : String(v));
+  const complemento = Object.fromEntries(
+    [
+      "contrato_tipo",
+      "contrato_inicio",
+      "contrato_termino",
+      "contrato_datas_pagamento",
+      "contrato_info",
+      "entrega_cep",
+      "entrega_endereco",
+      "entrega_numero",
+      "entrega_complemento",
+      "entrega_responsavel",
+      "entrega_telefone",
+      "entrega_contato_mestre",
+      "entrega_telefone_mestre",
+      "entrega_bairro",
+      "entrega_cidade",
+      "entrega_uf",
+    ].map((k) => [k, s((oc as Record<string, unknown>)[k])]),
+  );
+  const chave = `${res.status}-${res.total_apropriado}-${lista.map((i) => `${i.id}:${i.quantidade}:${i.valor_unitario}:${i.valor_impostos}`).join(",")}`;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" render={<Link href="/ordens-compra" />} aria-label="Voltar">
-            <ArrowLeft />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">{numeroOC(id)}</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <StatusBadge mapa={STATUS_OC} valor={oc.status} />
-              {oc.mapa_id && (
-                <Link href={`/mapas/${oc.mapa_id}`} className="hover:underline">
-                  Mapa {numeroMapa(oc.mapa_id)}
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-        <AcoesOc id={id} status={oc.status} podeComprar={compras} />
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
-          <CardTitle className="text-base">Aprovações</CardTitle>
-          {oc.status === "aguardando_aprovacao" && <DecisaoOc ocId={id} papeis={papeisDisponiveis} pendentes={pendentes} />}
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2">
-          {(["engenharia", "financeiro"] as const).map((p) => {
-            const d = decisao(p);
-            return (
-              <div key={p} className="flex gap-3 rounded-md border p-3 text-sm">
-                <Aprovacao valor={d ? d.aprovado : null} />
-                <div>
-                  <div className="font-medium capitalize">{p}</div>
-                  {d ? (
-                    <>
-                      <div className="text-muted-foreground">
-                        {d.aprovado ? "Aprovado" : "Reprovado"} por {d.usuario?.nome ?? "—"} em {dataHora(d.decidido_em)}
-                      </div>
-                      {d.justificativa && <div className="mt-1 whitespace-pre-wrap">{d.justificativa}</div>}
-                    </>
-                  ) : (
-                    <div className="text-muted-foreground">{oc.status === "aguardando_aprovacao" ? "Aguardando decisão" : "—"}</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
-
-      <OcForm
-        key={`oc-${oc.atualizado_em}`}
-        id={id}
-        inicial={{
-          obra_id: obraAtual,
-          fornecedor_id: fornAtual,
-          engenheiro_responsavel: oc.engenheiro_responsavel ?? "",
-          data_emissao: oc.data_emissao ?? "",
-          data_entrega: oc.data_entrega ?? "",
-          condicao_pagamento: oc.condicao_pagamento ?? "",
-          prazo_entrega: oc.prazo_entrega ?? "",
-          frete: oc.frete ? String(oc.frete) : "",
-          observacao: oc.observacao ?? "",
+    <>
+      {topo}
+      <TelaOc
+        key={chave}
+        cabecalho={{
+          id,
+          numero_cliente: res.numero_cliente,
+          mapa_id: res.mapa_id,
+          status: res.status,
+          pendencia: res.pendencia,
+          regularizacao_engenharia: res.regularizacao_engenharia,
+          obra_rotulo: `${res.obra_nome} - ${REGIME_ROTULO[res.obra_regime] ?? res.obra_regime}`,
+          filial: (oc.filial as { nome: string } | null)?.nome ?? "",
+          fornecedor_rotulo: res.fornecedor_fantasia ? `${res.fornecedor_fantasia} | ${res.fornecedor_nome}` : res.fornecedor_nome,
+          percentual_especial: oc.percentual_especial == null ? null : Number(oc.percentual_especial),
+          frete: Number(oc.frete ?? 0),
+          desconto: Number(oc.desconto ?? 0),
+          total_apropriado: Number(res.total_apropriado),
+          total_pago: Number(res.total_pago),
+          dados: {
+            nome: s(oc.nome),
+            numero_cliente: s(oc.numero_cliente),
+            observacao: s(oc.observacao),
+            tipo: s(oc.tipo),
+            data_entrega: s(oc.data_entrega),
+            prazo_locacao: s(oc.prazo_locacao),
+            data_devolucao: s(oc.data_devolucao),
+            forma_pagamento: s(oc.condicao_pagamento),
+            prazo: s(oc.prazo_entrega),
+          },
+          complemento,
         }}
-        itensIniciais={itens}
-        obras={garantir(obras, obraAtual, { valor: obraAtual, rotulo: `Obra #${obraAtual}` })}
-        fornecedores={garantir(fornecedores, fornAtual, { valor: fornAtual, rotulo: `Fornecedor #${fornAtual}`, bloqueado: false })}
+        itens={lista}
+        aprops={(aprops ?? []) as AproOc[]}
+        ccs={ccs}
+        notas={((notas ?? []) as { id: number; numero: string; serie: string; valor: number; pago_em: string | null; status: string; fase: string; fornecedor_nome: string; pago_por_nome: string | null; vencimento: string; guia_id: number | null }[]).map(
+          (n): NotaOc => ({
+            id: n.id,
+            numero: n.numero,
+            serie: n.serie,
+            valor: Number(n.valor),
+            pago_em: n.pago_em,
+            status: n.status,
+            fase: n.fase,
+            fornecedor: n.fornecedor_nome,
+            usuario: n.pago_por_nome ?? "",
+            vencimento: n.vencimento,
+            guia: n.guia_id,
+          }),
+        )}
+        arquivos={(arquivos ?? []) as { id: number; nome: string; enviado_em: string }[]}
+        justificativas={((just ?? []) as unknown as { id: number; status: string; justificativa: string; criado_em: string; usuario: { nome: string } | null }[]).map((j) => ({
+          id: j.id,
+          status: j.status,
+          justificativa: j.justificativa,
+          responsavel: j.usuario?.nome ?? "",
+          criado_em: j.criado_em,
+        }))}
         catalogo={catalogo}
-        editavel={editavel}
+        podeEditar={perfil.ativo && ["admin", "engenharia", "suprimentos"].includes(perfil.papel)}
       />
-    </div>
+    </>
   );
 }

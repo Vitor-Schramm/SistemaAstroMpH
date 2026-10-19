@@ -15,7 +15,7 @@ import type { SolicitacaoResumo } from "@/lib/solicitacoes/dados";
 
 // "Solicitações de Compra": lista agrupada por cliente e lista das solicitações de um cliente.
 
-export function BotoesTopo({ filtroAberto, onFiltro, novoHref = "/solicitacoes/nova", novoTitulo = "Nova Solicitação" }: { filtroAberto: boolean; onFiltro: () => void; novoHref?: string; novoTitulo?: string }) {
+export function BotoesTopo({ filtroAberto, onFiltro, novoHref = "/solicitacoes/nova", novoTitulo = "Nova Solicitação" }: { filtroAberto: boolean; onFiltro: () => void; novoHref?: string | null; novoTitulo?: string }) {
   return (
     <div className="flex justify-end gap-[0.3rem] px-[1.5rem] pt-[1.5rem]">
       <button
@@ -27,6 +27,7 @@ export function BotoesTopo({ filtroAberto, onFiltro, novoHref = "/solicitacoes/n
       >
         <Filter className="size-[14px]" />
       </button>
+      {novoHref && (
       <Link
         href={novoHref}
         title={novoTitulo}
@@ -34,6 +35,7 @@ export function BotoesTopo({ filtroAberto, onFiltro, novoHref = "/solicitacoes/n
       >
         <Plus className="size-[14px]" />
       </Link>
+      )}
     </div>
   );
 }

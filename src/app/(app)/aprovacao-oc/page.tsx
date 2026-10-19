@@ -1,27 +1,24 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { getPerfil, papeisAprovador } from "@/lib/auth";
-import { ListaAprovacao, type LinhaAprovacao } from "./lista";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { getPerfil } from "@/lib/auth";
+import { opcoesFornecedores } from "@/lib/compras/dados";
+import { carregarOcs } from "@/lib/ocs/dados";
+import { obrasSelect } from "@/lib/solicitacoes/dados";
+import { AvisoOcs } from "../ordens-compra/aviso";
+import { AprovacaoOc } from "./lista";
 
-export const metadata: Metadata = { title: "Aprovação de OC" };
+export const metadata: Metadata = { title: "Aprovação" };
 
 export default async function AprovacaoOcPage() {
-  const [perfil, supabase] = await Promise.all([getPerfil(), createClient()]);
-  const { data, error } = await supabase
-    .from("ordens_compra_resumo")
-    .select(
-      "id, data_emissao, obra_id, obra_codigo, obra_nome, cliente_nome, fornecedor_id, fornecedor_nome, engenheiro_responsavel, valor_total, aprovado_engenharia, aprovado_financeiro, fornecedor_bloqueado",
-    )
-    .eq("status", "aguardando_aprovacao")
-    .order("data_emissao")
-    .limit(2000);
-  if (error) throw new Error(error.message);
-
+  const [perfil, ocs, obras, fornecedores] = await Promise.all([getPerfil(), carregarOcs({ status: "aguardando_aprovacao" }), obrasSelect(), opcoesFornecedores()]);
   return (
-    <ListaAprovacao
-      linhas={(data ?? []) as LinhaAprovacao[]}
-      meusPapeis={perfil.ativo ? papeisAprovador(perfil.papel) : []}
-      admin={perfil.papel === "admin"}
-    />
+    <>
+      <CabecalhoPagina titulo="Aprovação" migalhas={[{ titulo: "Aprovação de OC com Pendência" }]} />
+      {ocs ? (
+        <AprovacaoOc ocs={ocs} obras={obras} fornecedores={fornecedores} podeDecidir={perfil.ativo && ["admin", "engenharia"].includes(perfil.papel)} />
+      ) : (
+        <AvisoOcs />
+      )}
+    </>
   );
 }
