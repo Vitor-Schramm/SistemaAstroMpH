@@ -8,7 +8,7 @@ import { ccsComSaldo } from "@/lib/mapas/dados";
 import { REGIME_ROTULO } from "@/lib/solicitacoes/dados";
 import type { OcResumo } from "@/lib/ocs/dados";
 import { AvisoOcs } from "../aviso";
-import { TelaOc, type AproOc, type ItemOc, type NotaOc } from "../tela-oc";
+import { TelaOc, type ItemOc, type NotaOc } from "../tela-oc";
 
 export const metadata: Metadata = { title: "Vizualizar Ordem" };
 
@@ -23,7 +23,7 @@ export default async function OcPage({ params }: PageProps<"/ordens-compra/[id]"
     supabase.from("ocs_resumo").select("*").eq("id", id).maybeSingle(),
     supabase.from("ordens_compra").select("*, filial:clientes!filial_cliente_id(nome)").eq("id", id).maybeSingle(),
     supabase.from("oc_itens").select("*, item:itens(valor_medio)").eq("ordem_compra_id", id).order("ordem"),
-    supabase.from("apropriacoes_detalhe").select("id, cc_codigo, cc_descricao, valor, saldo_ref").eq("origem", "oc").eq("origem_id", id).order("id"),
+    supabase.from("apropriacoes").select("id, valor, saldo_ref, cc:centros_custo(codigo, descricao)").eq("origem", "oc").eq("origem_id", id).order("id"),
     supabase.from("notas_resumo").select("id, numero, serie, valor, pago_em, status, fase, fornecedor_nome, pago_por_nome, vencimento, guia_id").eq("ordem_compra_id", id).neq("status", "cancelada"),
     supabase.from("oc_arquivos").select("id, nome, enviado_em").eq("ordem_compra_id", id).order("enviado_em"),
     supabase.from("oc_justificativas").select("id, status, justificativa, criado_em, usuario:perfis(nome)").eq("ordem_compra_id", id).order("criado_em"),
@@ -110,7 +110,7 @@ export default async function OcPage({ params }: PageProps<"/ordens-compra/[id]"
           complemento,
         }}
         itens={lista}
-        aprops={(aprops ?? []) as AproOc[]}
+        aprops={((aprops ?? []) as unknown as { id: number; valor: number; saldo_ref: number | null; cc: { codigo: string; descricao: string } | null }[]).map((a) => ({ id: a.id, valor: Number(a.valor), saldo_ref: a.saldo_ref == null ? null : Number(a.saldo_ref), cc_codigo: a.cc?.codigo ?? "", cc_descricao: a.cc?.descricao ?? "" }))}
         ccs={ccs}
         notas={((notas ?? []) as { id: number; numero: string; serie: string; valor: number; pago_em: string | null; status: string; fase: string; fornecedor_nome: string; pago_por_nome: string | null; vencimento: string; guia_id: number | null }[]).map(
           (n): NotaOc => ({
