@@ -171,7 +171,7 @@ export function GradeCotacao({
           )}
         </td>
       ))}
-      <td className={td}>{n2(menor(fornecedores.map((f) => extra(f.fornecedor_id, k))))}</td>
+      <td className={td}>{n2(fornecedores.length ? Math.min(...fornecedores.map((f) => extra(f.fornecedor_id, k))) : 0)}</td>
     </tr>
   );
 
