@@ -6,7 +6,8 @@ import { Search } from "lucide-react";
 import { Cartao } from "@/components/astro/basicos";
 import { TabelaDados, type ColunaTabela } from "@/components/astro/tabela-dados";
 import { data as fmtData } from "@/lib/format";
-import { STATUS_OC_ORIGINAL, type OcResumo } from "@/lib/ocs/dados";
+import { STATUS_OC_ORIGINAL } from "@/lib/ocs/tipos";
+import type { OcResumo } from "@/lib/ocs/dados";
 import { BotoesTopo, FILTRO_VAZIO, PainelFiltro, type Filtro } from "../solicitacoes/listas";
 
 // "Ordens de Compra": lista agrupada por cliente e lista das OCs de um cliente.

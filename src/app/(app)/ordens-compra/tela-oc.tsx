@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { data as fmtData, dataHora } from "@/lib/format";
 import { UFS } from "@/lib/cadastros/config";
 import type { ItemCatalogo } from "@/lib/compras/tipos";
-import { STATUS_OC_ORIGINAL } from "@/lib/ocs/dados";
+import { STATUS_OC_ORIGINAL } from "@/lib/ocs/tipos";
 import {
   alternarRegularizacaoOc,
   apropriarOc,
