@@ -35,8 +35,8 @@ export const MENU: EntradaMenu[] = [
     titulo: "Anexar OC x NF",
     icone: "align-justify",
     sub: [
-      { titulo: "NF's Fase Cinza", href: "/notas/nova?fase=cinza", ativoEm: ["/notas/nova"] },
-      { titulo: "NF's Fase Azul", href: "/notas/nova?fase=azul" },
+      { titulo: "NF's Fase Cinza", href: "/vincular/cinza" },
+      { titulo: "NF's Fase Azul", href: "/vincular/azul" },
     ],
   },
   {
