@@ -163,7 +163,7 @@ export function TelaNotas({
           { chave: "forn", titulo: "Fornecedor", valor: (n) => n.fornecedor_nome },
           { chave: "valor", titulo: "Valor", valor: (n) => n.valor, render: (n) => real(n.valor), className: "whitespace-nowrap" },
           { chave: "reg", titulo: "Data Registro", valor: (n) => n.criado_em, render: (n) => fmtData(n.criado_em) },
-          ...(tela === "azul_pagas" ? [{ chave: "guia", titulo: "Guia Envio", valor: (n: NotaLista) => n.guia_id ?? "" }] : []),
+          ...(tela === "azul_pagas" ? [{ chave: "guia", titulo: "Guia Envio", valor: (n: NotaLista) => n.guia_numero ?? "" }] : []),
           { chave: "acoes", titulo: "Ações", valor: () => "", exportar: false, ordenavel: false, render: acoes },
         ];
 

@@ -43,6 +43,7 @@ export function TabelaDados<T>({
   porPaginaInicial = 10,
   vazio = "Nenhum registro encontrado",
   exportar = true,
+  controles = true,
 }: {
   colunas: ColunaTabela<T>[];
   linhas: T[];
@@ -52,6 +53,8 @@ export function TabelaDados<T>({
   vazio?: string;
   /** O original esconde o botão Exportar em algumas telas (ex.: listas agrupadas). */
   exportar?: boolean;
+  /** Sem "Exibir N" e "Pesquisar" (ex.: itens da Guia de Envio). */
+  controles?: boolean;
 }) {
   const [porPagina, setPorPagina] = useState(porPaginaInicial);
   const [busca, setBusca] = useState("");
@@ -103,6 +106,7 @@ export function TabelaDados<T>({
   return (
     <div>
       <div className="mx-[1.5rem] mt-[1rem] flex flex-wrap items-center justify-between gap-3">
+        {controles ? (
         <label className="flex items-center gap-2 text-[1rem]">
           Exibir
           <select
@@ -119,7 +123,11 @@ export function TabelaDados<T>({
           </select>
           resultados por página
         </label>
+        ) : (
+          <span />
+        )}
         <div className="flex flex-wrap items-center gap-3">
+          {controles && (
           <label className="flex items-center gap-2 text-[1rem]">
             Pesquisar
             <input
@@ -132,6 +140,7 @@ export function TabelaDados<T>({
               className="h-[38px] w-[200px] rounded-[0.357rem] border border-input bg-card px-[1rem] text-[1rem] outline-none placeholder:text-muted-foreground focus:border-primary"
             />
           </label>
+          )}
           {exportar && (
           <DropdownMenu>
             <DropdownMenuTrigger className="flex h-[38px] items-center gap-2 rounded-[0.358rem] border border-[#82868b] px-[1.5rem] text-[1rem] text-[#82868b] hover:bg-[rgba(130,134,139,0.04)]">

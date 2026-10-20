@@ -88,20 +88,6 @@ export async function cancelarNota(id: number): Promise<Resultado> {
   return { ok: true };
 }
 
-export async function criarGuia(obraId: number, notas: number[], observacao: string): Promise<Resultado> {
-  const { data, erro } = await rpc("criar_guia", { p_obra_id: obraId, p_nf_ids: notas, p_observacao: observacao });
-  if (erro) return { ok: false, erro };
-  revalidar();
-  return { ok: true, id: Number(data) };
-}
-
-export async function atualizarGuia(id: number, acao: "enviar" | "pagar" | "cancelar" | "nf_taxa", data?: string, nfTaxa?: boolean): Promise<Resultado> {
-  const { erro } = await rpc("atualizar_guia", { p_id: id, p_acao: acao, p_data: data || null, p_nf_taxa: nfTaxa ?? null });
-  if (erro) return { ok: false, erro };
-  revalidar();
-  return { ok: true };
-}
-
 export async function lancarAporte(obraId: number, data: string, valor: number, descricao: string): Promise<Resultado> {
   if (!obraId) return { ok: false, erro: "Selecione a obra." };
   if (!valor) return { ok: false, erro: "Informe o valor (negativo para estorno)." };

@@ -1,21 +1,20 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { AvisoGuias } from "@/components/guias/aviso";
+import { ConsultaGuiasAdm } from "@/components/guias/telas";
 import { getPerfil, podePagar } from "@/lib/auth";
-import { GuiasView, type Guia, type NotaGuia } from "./view";
+import { todasGuiasAdm } from "@/lib/guias/dados";
+import { obrasPorRegime } from "@/lib/notas/lista";
 
-export const metadata: Metadata = { title: "Guias Adm" };
+export const metadata: Metadata = { title: "Consulta Guias" };
 
+// Menu "Guias Adm": Consulta Guias (filtro por obra administrada e vencimento).
 export default async function GuiasAdmPage() {
-  const [perfil, supabase] = await Promise.all([getPerfil(), createClient()]);
-  const [{ data: guias, error }, { data: notas }] = await Promise.all([
-    supabase.from("guias_resumo").select("*").order("id", { ascending: false }).limit(2000),
-    supabase
-      .from("notas_resumo")
-      .select("id, guia_id, numero, serie, vencimento, valor, fornecedor_nome, status")
-      .not("guia_id", "is", null)
-      .limit(10000),
-  ]);
-  if (error) throw new Error(error.message);
-
-  return <GuiasView guias={(guias ?? []) as Guia[]} notas={(notas ?? []) as NotaGuia[]} podeEditar={perfil.ativo && podePagar(perfil.papel)} />;
+  const [perfil, guias, obras] = await Promise.all([getPerfil(), todasGuiasAdm(), obrasPorRegime(["administracao"])]);
+  return (
+    <>
+      <CabecalhoPagina titulo="Consulta Guias" migalhas={[{ titulo: "Guias Adm" }]} />
+      {guias ? <ConsultaGuiasAdm guias={guias} obras={obras} podePagar={perfil.ativo && podePagar(perfil.papel)} /> : <AvisoGuias />}
+    </>
+  );
 }

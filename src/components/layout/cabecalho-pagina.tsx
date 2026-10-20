@@ -5,7 +5,8 @@ import { ChevronRight } from "lucide-react";
 
 export type Migalha = { titulo: string; href?: string };
 
-export function CabecalhoPagina({ titulo, migalhas = [], acoes }: { titulo: string; migalhas?: Migalha[]; acoes?: React.ReactNode }) {
+/** `inicio`: rótulo do primeiro link (o original usa "Obras" nas telas que partem da obra). */
+export function CabecalhoPagina({ titulo, migalhas = [], acoes, inicio = "Home" }: { titulo: string; migalhas?: Migalha[]; acoes?: React.ReactNode; inicio?: string }) {
   return (
     <div className="mb-[2rem] flex flex-wrap items-center justify-between gap-3">
       <div className="flex flex-wrap items-center">
@@ -15,7 +16,7 @@ export function CabecalhoPagina({ titulo, migalhas = [], acoes }: { titulo: stri
         <ol className="flex flex-wrap items-center text-[1rem]">
           <li>
             <Link href="/" className="text-primary hover:text-[#019883]">
-              Home
+              {inicio}
             </Link>
           </li>
           {migalhas.map((m) => (
