@@ -1,17 +1,37 @@
 import type { Metadata } from "next";
-import { getPerfil, podeLancarNf, podePagar } from "@/lib/auth";
-import { carregarNotas } from "@/lib/notas/dados";
-import { NotasCinzaView } from "./view";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { AvisoNotas } from "@/components/notas/aviso-notas";
+import { TelaNotas } from "@/components/notas/telas-original";
+import { getPerfil, podeAprovarNf, podePagar } from "@/lib/auth";
+import { carregarNotas, obrasPorRegime } from "@/lib/notas/lista";
 
-export const metadata: Metadata = { title: "Notas Fase Cinza" };
+export const metadata: Metadata = { title: "Pagamentos" };
 
-export default async function NotasCinzaPage() {
-  const [perfil, notas] = await Promise.all([getPerfil(), carregarNotas({ fase: "cinza" })]);
+// Notas Fase Cinza: Pendentes (padrão) e Pagas (?situacao=pagas), como no menu do original.
+export default async function NotasCinzaPage({ searchParams }: PageProps<"/notas-cinza">) {
+  const pagas = (await searchParams).situacao === "pagas";
+  const [perfil, notas, obras] = await Promise.all([
+    getPerfil(),
+    carregarNotas("cinza", pagas ? ["paga"] : ["pendente_pagamento"]),
+    pagas ? obrasPorRegime(["fechado", "completo"]) : Promise.resolve([]),
+  ]);
+  const ativo = perfil.ativo;
   return (
-    <NotasCinzaView
-      notas={notas}
-      podePagar={perfil.ativo && podePagar(perfil.papel)}
-      podeLancar={perfil.ativo && podeLancarNf(perfil.papel)}
-    />
+    <>
+      <CabecalhoPagina titulo={pagas ? "Pagamentos Realizados" : "Pagamentos Pendentes"} migalhas={[{ titulo: pagas ? "Pagamentos Realizados" : "Pagamentos Pendentes" }]} />
+      {notas ? (
+        <TelaNotas
+          key={pagas ? "pagas" : "pendentes"}
+          tela={pagas ? "pagas" : "pendentes"}
+          notas={notas}
+          obras={obras}
+          podeAprovar={ativo && podeAprovarNf(perfil.papel)}
+          podePagar={ativo && podePagar(perfil.papel)}
+          podeExcluir={false}
+        />
+      ) : (
+        <AvisoNotas />
+      )}
+    </>
   );
 }

@@ -1,24 +1,29 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { getPerfil, podeAprovarNf } from "@/lib/auth";
-import { carregarNotas } from "@/lib/notas/dados";
-import type { ReembolsoResumo } from "@/lib/reembolsos/tipos";
-import { AprovacaoNfView } from "./view";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { AvisoNotas } from "@/components/notas/aviso-notas";
+import { TelaNotas } from "@/components/notas/telas-original";
+import { getPerfil, podeAprovarNf, podePagar } from "@/lib/auth";
+import { carregarNotas } from "@/lib/notas/lista";
 
 export const metadata: Metadata = { title: "Aprovação NF" };
 
 export default async function AprovacaoNfPage() {
-  const supabase = await createClient();
-  const [perfil, notas, { data: reembolsos }] = await Promise.all([
-    getPerfil(),
-    carregarNotas({ status: ["aguardando_engenharia", "reprovada"] }),
-    supabase.from("reembolsos_resumo").select("*").eq("status", "aguardando_aprovacao").order("id"),
-  ]);
+  const [perfil, notas] = await Promise.all([getPerfil(), carregarNotas("cinza", ["aguardando_engenharia"])]);
+  const ativo = perfil.ativo;
   return (
-    <AprovacaoNfView
-      notas={notas}
-      reembolsos={(reembolsos ?? []) as ReembolsoResumo[]}
-      podeAprovar={perfil.ativo && podeAprovarNf(perfil.papel)}
-    />
+    <>
+      <CabecalhoPagina titulo="Aprovação NF" migalhas={[{ titulo: "Aprovação NF" }]} />
+      {notas ? (
+        <TelaNotas
+          tela="aprovacao"
+          notas={notas}
+          podeAprovar={ativo && podeAprovarNf(perfil.papel)}
+          podePagar={ativo && podePagar(perfil.papel)}
+          podeExcluir={ativo && ["admin", "engenharia", "suprimentos", "financeiro"].includes(perfil.papel)}
+        />
+      ) : (
+        <AvisoNotas />
+      )}
+    </>
   );
 }

@@ -133,7 +133,7 @@ function Dados({ c, fase }: { c: CabecalhoVinculo; fase: "cinza" | "azul" }) {
   );
 }
 
-function ModalArquivos({ ocId, nota, onFechar }: { ocId: number; nota: Lancamento; onFechar: () => void }) {
+export function ModalArquivos({ ocId, nota, onFechar }: { ocId: number; nota: Pick<Lancamento, "id" | "numero" | "status" | "anexos">; onFechar: () => void }) {
   const ref = useRef<HTMLInputElement>(null);
   const { pending, rodar } = useAcao();
   const [enviando, setEnviando] = useState(false);

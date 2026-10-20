@@ -10,7 +10,7 @@ async function chamar(fn: string, args: Record<string, unknown>, ocId?: number):
   const supabase = await createClient();
   const { data, error } = await supabase.rpc(fn, args);
   if (error) return { ok: false, erro: traduzirErro(error.message) };
-  for (const r of ["/vincular/cinza", "/vincular/azul", "/aprovacao-nf", "/notas-cinza", "/notas-azul", "/ordens-compra"]) revalidatePath(r, "layout");
+  for (const r of ["/vincular/cinza", "/vincular/azul", "/aprovacao-nf", "/notas-cinza", "/notas-azul", "/ordens-compra", "/obras"]) revalidatePath(r, "layout");
   if (ocId) {
     revalidatePath(`/vincular/cinza/${ocId}`);
     revalidatePath(`/vincular/azul/${ocId}`);
@@ -34,3 +34,6 @@ export const editarBancoLancamento = async (ocId: number, id: number, dados: { c
   chamar("editar_banco_lancamento", { p_id: id, p_dados: dados }, ocId);
 
 export const excluirLancamento = async (ocId: number, id: number) => chamar("excluir_lancamento_nf", { p_id: id }, ocId);
+
+export const excluirPagamentoNf = async (id: number, tipo: "pagamento" | "pagamento_nota") => chamar("excluir_pagamento_nf", { p_id: id, p_tipo: tipo });
+export const alterarNumeroNf = async (id: number, numero: string, serie: string) => chamar("alterar_numero_nf", { p_id: id, p_numero: numero, p_serie: serie });
