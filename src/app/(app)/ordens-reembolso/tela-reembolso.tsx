@@ -406,7 +406,7 @@ export function TelaReembolso({
           {linhas.map((l) => (
             <tr key={l.chave} className={cn(l.excluir && "opacity-50")}>
               {(["descricao", "apropriacao", "tipo", "data", "valor"] as const).map((k) => (
-                <td key={k} className={cn(celula, k === "descricao" ? "min-w-[16rem]" : "w-[10%]")}>
+                <td key={k} className={cn(celula, k === "descricao" ? "min-w-[16rem]" : k === "data" ? "w-[10%] min-w-[8.5rem]" : "w-[10%] min-w-[7rem]")}>
                   {editavel ? (
                     <input
                       value={l[k]}

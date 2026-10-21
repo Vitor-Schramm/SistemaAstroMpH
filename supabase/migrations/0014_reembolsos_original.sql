@@ -153,9 +153,9 @@ begin
   v_azul := v_regime = 'administracao';
   insert into public.notas_fiscais (fase, ordem_compra_id, ordem_reembolso_id, obra_id, fornecedor_id, numero, serie, tipo_documento, vencimento, valor, status,
                                     tipo_pagamento, favorecido_cpf_cnpj, favorecido, banco, agencia, conta)
-  values (case when v_azul then 'azul' else 'cinza' end, null, p_id, v_r.obra_id, v_r.fornecedor_id,
+  values ((case when v_azul then 'azul' else 'cinza' end)::public.fase_nf, null, p_id, v_r.obra_id, v_r.fornecedor_id,
           extract(epoch from clock_timestamp())::bigint::text, '1', 'REEMBOLSO', current_date, v_total,
-          case when v_azul then 'aguardando_guia' else 'pendente_pagamento' end,
+          (case when v_azul then 'aguardando_guia' else 'pendente_pagamento' end)::public.status_nf,
           'Transferencia', v_r.cpf_cnpj, (select nome from public.fornecedores where id = v_r.fornecedor_id), v_r.banco, v_r.agencia, v_r.conta)
   returning id into v_nota;
   if v_azul then
