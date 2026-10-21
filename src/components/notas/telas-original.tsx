@@ -125,7 +125,7 @@ export function TelaNotas({
         </>
       )}
       {(tela === "pagas" || tela === "azul_pagas") && icone("Arquivos", Download, () => setModal({ tipo: "arquivos", nota: n }))}
-      <Link href={`/ordens-compra/${n.ordem_compra_id}`} title="Vizualizar Pedido" className="text-primary">
+      <Link href={n.ordem_reembolso_id ? `/ordens-reembolso/${n.ordem_reembolso_id}` : `/ordens-compra/${n.ordem_compra_id}`} title="Vizualizar Pedido" className="text-primary">
         <Search className="size-[14px]" />
       </Link>
       {(tela === "aprovacao" || tela === "azul_pendentes") &&
@@ -133,7 +133,7 @@ export function TelaNotas({
         icone(
           "Excluir",
           Trash2,
-          () => confirm(`Confirma exclusão da Nota: ${n.numero}`) && rodar(() => excluirLancamento(n.ordem_compra_id, n.id), "Nota excluída.", n),
+          () => confirm(`Confirma exclusão da Nota: ${n.numero}`) && rodar(() => excluirLancamento(n.ordem_compra_id ?? 0, n.id), "Nota excluída.", n),
           "text-[#ea5455]",
         )}
     </span>
@@ -226,7 +226,7 @@ export function TelaNotas({
               <DialogHeader>
                 <DialogTitle className="text-[1.1rem] font-medium text-heading">{titulosModal[modal.tipo]}</DialogTitle>
               </DialogHeader>
-              {modal.tipo === "arquivos" && <ModalArquivos ocId={modal.nota.ordem_compra_id} nota={modal.nota} onFechar={fechar} />}
+              {modal.tipo === "arquivos" && <ModalArquivos ocId={modal.nota.ordem_compra_id ?? 0} nota={modal.nota} onFechar={fechar} />}
               {modal.tipo === "aprovar" && (
                 <div>
                   <DadosNota nota={modal.nota} />

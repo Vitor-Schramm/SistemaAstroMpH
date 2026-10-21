@@ -13,7 +13,8 @@ export type NotaLista = {
   pago_em: string | null;
   guia_id: number | null;
   guia_numero?: number | null;
-  ordem_compra_id: number;
+  ordem_reembolso_id?: number | null;
+  ordem_compra_id: number | null;
   obra_id: number;
   obra_nome: string;
   cliente_nome: string | null;

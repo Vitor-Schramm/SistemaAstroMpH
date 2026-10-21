@@ -1,20 +1,17 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { getPerfil, podeAprovarNf, podePagar } from "@/lib/auth";
-import type { ReembolsoResumo } from "@/lib/reembolsos/tipos";
-import { ListaReembolsos } from "./lista";
+import { CabecalhoPagina } from "@/components/layout/cabecalho-pagina";
+import { carregarReembolsos } from "@/lib/reembolsos/dados";
+import { AvisoReembolsos } from "./aviso";
+import { GrupoReembolsos } from "./listas";
 
-export const metadata: Metadata = { title: "Ordens de reembolso" };
+export const metadata: Metadata = { title: "Ordem Reembolso" };
 
-export default async function ReembolsosPage() {
-  const [perfil, supabase] = await Promise.all([getPerfil(), createClient()]);
-  const { data, error } = await supabase.from("reembolsos_resumo").select("*").order("id", { ascending: false }).limit(3000);
-  if (error) throw new Error(error.message);
+export default async function OrdensReembolsoPage() {
+  const reembolsos = await carregarReembolsos();
   return (
-    <ListaReembolsos
-      linhas={(data ?? []) as ReembolsoResumo[]}
-      podeAprovar={perfil.ativo && podeAprovarNf(perfil.papel)}
-      podePagar={perfil.ativo && podePagar(perfil.papel)}
-    />
+    <>
+      <CabecalhoPagina titulo="Ordem Reembolso" migalhas={[{ titulo: "Ordem Reembolso" }]} />
+      {reembolsos ? <GrupoReembolsos reembolsos={reembolsos} /> : <AvisoReembolsos />}
+    </>
   );
 }
