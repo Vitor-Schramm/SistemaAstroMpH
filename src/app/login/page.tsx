@@ -3,12 +3,19 @@ import type { Metadata } from "next";
 import { Building2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
+import { AcessoRapido } from "./acesso-rapido";
 
 export const metadata: Metadata = { title: "Entrar" };
 
 async function FormComDestino({ searchParams }: { searchParams: PageProps<"/login">["searchParams"] }) {
   const { next } = await searchParams;
-  return <LoginForm next={typeof next === "string" ? next : undefined} />;
+  const destino = typeof next === "string" ? next : undefined;
+  return (
+    <>
+      <LoginForm next={destino} />
+      {process.env.LOGIN_TESTE_SENHA && <AcessoRapido next={destino} />}
+    </>
+  );
 }
 
 export default function LoginPage({ searchParams }: PageProps<"/login">) {
