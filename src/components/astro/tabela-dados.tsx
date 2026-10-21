@@ -44,6 +44,7 @@ export function TabelaDados<T>({
   vazio = "Nenhum registro encontrado",
   exportar = true,
   controles = true,
+  totais,
 }: {
   colunas: ColunaTabela<T>[];
   linhas: T[];
@@ -55,6 +56,8 @@ export function TabelaDados<T>({
   exportar?: boolean;
   /** Sem "Exibir N" e "Pesquisar" (ex.: itens da Guia de Envio). */
   controles?: boolean;
+  /** Linha de totais (rodapé) sobre os registros filtrados, por chave de coluna. */
+  totais?: (linhas: T[]) => Partial<Record<string, React.ReactNode>>;
 }) {
   const [porPagina, setPorPagina] = useState(porPaginaInicial);
   const [busca, setBusca] = useState("");
@@ -220,6 +223,20 @@ export function TabelaDados<T>({
               </tr>
             ))}
           </tbody>
+          {totais && (
+            <tfoot>
+              <tr>
+                {(() => {
+                  const t = totais(filtradas);
+                  return colunas.map((c) => (
+                    <th key={c.chave} className={cn("border-t border-border px-[1.5rem] py-[0.72rem] text-left font-bold whitespace-nowrap", c.className)}>
+                      {t[c.chave] ?? ""}
+                    </th>
+                  ));
+                })()}
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 
