@@ -10,7 +10,6 @@ export const metadata: Metadata = { title: "Solicitação de Reembolso" };
 // PDF "SOLICITAÇÃO DE REEMBOLSO DE DESPESAS" do AstroTools (A4 retrato).
 
 const dataBr = (iso: string | null) => (iso ? iso.slice(0, 10).split("-").reverse().join("/") : "");
-const hoje = () => new Date().toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 
 async function Documento({ params }: { params: PageProps<"/imprimir/reembolso/[id]">["params"] }) {
   await connection();
@@ -21,13 +20,13 @@ async function Documento({ params }: { params: PageProps<"/imprimir/reembolso/[i
   const { reembolso: r, itens } = d;
   return (
     <article className="mx-auto max-w-[794px] bg-white px-[56px] py-[60px] text-[12px] leading-tight text-black print:max-w-none print:p-0">
-      <h1 className="mb-[60px] text-[15px] font-bold">SOLICITAÇÃO DE REEMBOLSO DE DESPESAS</h1>
+      <h1 className="mb-[60px] text-[15px] font-bold text-black">SOLICITAÇÃO DE REEMBOLSO DE DESPESAS</h1>
       <div className="mb-[40px] flex justify-between">
         <p>
           <b>Obra:</b> {r.obra_nome}
         </p>
         <p>
-          <b>Data:</b> {hoje()}
+          <b>Data:</b> {dataBr(r.criado_em)}
         </p>
       </div>
       <table className="mb-[30px] w-full border-collapse">
