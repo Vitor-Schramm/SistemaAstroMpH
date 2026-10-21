@@ -32,14 +32,14 @@ function obrasDe(lista: OcResumo[]) {
   return [...m].map(([valor, rotulo]) => ({ valor, rotulo })).sort((a, b) => a.rotulo.localeCompare(b.rotulo, "pt-BR"));
 }
 
-function Moldura({ filtro, setFiltro, ocs, children }: { filtro: Filtro; setFiltro: (f: Filtro) => void; ocs: OcResumo[]; children: React.ReactNode }) {
+function Moldura({ filtro, setFiltro, ocs, podeCriar, children }: { filtro: Filtro; setFiltro: (f: Filtro) => void; ocs: OcResumo[]; podeCriar: boolean; children: React.ReactNode }) {
   const [aberto, setAberto] = useState(false);
   return (
     <Cartao>
       <div className="border-b border-border px-[1.5rem] py-[1.5rem]">
         <h4 className="mb-0 text-[1.285rem] font-medium">Ordens de Compra</h4>
       </div>
-      <BotoesTopo filtroAberto={aberto} onFiltro={() => setAberto(!aberto)} novoHref={null} />
+      <BotoesTopo filtroAberto={aberto} onFiltro={() => setAberto(!aberto)} novoHref={podeCriar ? "/ordens-compra/nova" : null} novoTitulo="Nova Ordem de Compra" />
       {aberto && <PainelFiltro obras={obrasDe(ocs)} valor={filtro} onChange={setFiltro} status={STATUS_FILTRO} />}
       <div className="pt-[1.5rem]">{children}</div>
     </Cartao>
@@ -48,7 +48,7 @@ function Moldura({ filtro, setFiltro, ocs, children }: { filtro: Filtro; setFilt
 
 type Grupo = { cliente_id: number; cliente: string; responsaveis: string; quantidade: number };
 
-export function GrupoOcs({ ocs }: { ocs: OcResumo[] }) {
+export function GrupoOcs({ ocs, podeCriar = false }: { ocs: OcResumo[]; podeCriar?: boolean }) {
   const [filtro, setFiltro] = useState(FILTRO_VAZIO);
   const grupos = new Map<number, Grupo>();
   for (const o of aplicar(ocs, filtro)) {
@@ -74,7 +74,7 @@ export function GrupoOcs({ ocs }: { ocs: OcResumo[] }) {
     },
   ];
   return (
-    <Moldura filtro={filtro} setFiltro={setFiltro} ocs={ocs}>
+    <Moldura filtro={filtro} setFiltro={setFiltro} ocs={ocs} podeCriar={podeCriar}>
       <TabelaDados
         colunas={colunas}
         linhas={[...grupos.values()].sort((a, b) => a.cliente.localeCompare(b.cliente, "pt-BR"))}
@@ -86,7 +86,7 @@ export function GrupoOcs({ ocs }: { ocs: OcResumo[] }) {
   );
 }
 
-export function ListaOcs({ ocs }: { ocs: OcResumo[] }) {
+export function ListaOcs({ ocs, podeCriar = false }: { ocs: OcResumo[]; podeCriar?: boolean }) {
   const [filtro, setFiltro] = useState(FILTRO_VAZIO);
   const colunas: ColunaTabela<OcResumo>[] = [
     { chave: "num", titulo: "Ordem Cliente", valor: (o) => o.numero_cliente ?? o.id, className: "font-semibold" },
@@ -112,7 +112,7 @@ export function ListaOcs({ ocs }: { ocs: OcResumo[] }) {
     },
   ];
   return (
-    <Moldura filtro={filtro} setFiltro={setFiltro} ocs={ocs}>
+    <Moldura filtro={filtro} setFiltro={setFiltro} ocs={ocs} podeCriar={podeCriar}>
       <TabelaDados colunas={colunas} linhas={aplicar(ocs, filtro)} chave={(o) => o.id} nomeArquivo="ordens-compra" />
     </Moldura>
   );

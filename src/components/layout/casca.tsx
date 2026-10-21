@@ -5,6 +5,7 @@ import { Home, Menu, Settings, X } from "lucide-react";
 import { useState, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import { MenuLateral } from "./menu-lateral";
+import { ProvedorPapel } from "./papel";
 import { ProvedorPreferencias, usePreferencias, type Largura, type Skin, type TipoNavbar, type TipoRodape } from "./preferencias";
 
 // Casca de página igual ao AstroTools (Vuexy, layout vertical): menu lateral, barra superior
@@ -219,9 +220,11 @@ function Conteudo({ usuario, children }: { usuario: React.ReactNode; children: R
 export function Casca({ usuario, children }: { usuario: React.ReactNode; children: React.ReactNode }) {
   return (
     <ProvedorPreferencias>
-      <MenuLateral />
-      <Conteudo usuario={usuario}>{children}</Conteudo>
-      <Customizador />
+      <ProvedorPapel>
+        <MenuLateral />
+        <Conteudo usuario={usuario}>{children}</Conteudo>
+        <Customizador />
+      </ProvedorPapel>
     </ProvedorPreferencias>
   );
 }

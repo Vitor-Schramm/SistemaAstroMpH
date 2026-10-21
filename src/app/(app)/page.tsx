@@ -2,7 +2,10 @@ import Link from "next/link";
 import { BadgeCheck, ClipboardList, FileCheck2, FilePlus2, HandCoins, Receipt, TriangleAlert } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { connection } from "next/server";
+import { PainelSuprimentos } from "@/components/painel/suprimentos";
 import { getPerfil } from "@/lib/auth";
+import { carregarPainelSuprimentos } from "@/lib/painel-suprimentos";
 import { carregarPainel, carregarPendencias } from "@/lib/painel";
 import { moeda } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -10,13 +13,20 @@ import { cn } from "@/lib/utils";
 const pct = (v: number | null) => (v == null ? "—" : `${String(v).replace(".", ",")}%`);
 
 export default async function InicioPage() {
-  const [perfil, painelOuNulo, p] = await Promise.all([getPerfil(), carregarPainel(), carregarPendencias()]);
+  const perfil = await getPerfil();
+  // Suprimentos tem um dashboard próprio no original.
+  if (perfil.papel === "suprimentos") {
+    await connection();
+    const d = await carregarPainelSuprimentos(perfil.id, new Date());
+    return <PainelSuprimentos {...d} />;
+  }
+  const [painelOuNulo, p] = await Promise.all([carregarPainel(), carregarPendencias()]);
   const painel = painelOuNulo ?? [];
   const papel = perfil.papel;
   const admin = papel === "admin";
 
   const cards = [
-    { titulo: "Solicitações pendentes", n: p.solicitacoes, href: "/solicitacoes", icone: ClipboardList, meu: admin || papel === "suprimentos" },
+    { titulo: "Solicitações pendentes", n: p.solicitacoes, href: "/solicitacoes", icone: ClipboardList, meu: admin },
     { titulo: "OCs aguardando aprovação", n: p.ocsAprovacao, href: "/aprovacao-oc", icone: BadgeCheck, meu: admin || papel === "engenharia" || papel === "financeiro" },
     {
       titulo: "NFs e reembolsos p/ engenharia",

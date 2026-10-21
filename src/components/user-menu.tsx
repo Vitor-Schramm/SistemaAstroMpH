@@ -18,7 +18,7 @@ const PERFIS: Record<string, string> = {
   admin: "Administrador",
   financeiro: "Financeiro",
   engenharia: "Engenheiro",
-  suprimentos: "Suprimentos",
+  suprimentos: "Suprimento",
   usuario: "Usuário",
 };
 

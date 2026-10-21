@@ -16,6 +16,11 @@ async function chamar(fn: string, args: Record<string, unknown>, ocId?: number):
   return { ok: true, id: data == null ? undefined : Number(data) };
 }
 
+/** "Nova Ordem de Compra" direta (Suprimentos), sem mapa. */
+export type DadosOcDireta = DadosOc & { obra_id: string; filial_cliente_id: string; fornecedor_id: string; percentual_especial: string; frete: string; desconto: string };
+export type ItemOcDireta = { e_titulo: boolean; item_id: number | null; codigo: string; descricao: string; quantidade: number; unidade: string; valor_unitario: number; valor_impostos: number };
+export const criarOcDireta = async (dados: DadosOcDireta, itens: ItemOcDireta[]) => chamar("criar_oc_direta", { p_dados: dados, p_itens: itens });
+
 export type DadosOc = {
   nome: string;
   numero_cliente: string;

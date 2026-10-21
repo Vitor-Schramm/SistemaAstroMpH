@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { AlignJustify, ChevronRight, Circle, CircleDot, Database, FileText, Home, LayoutGrid, MoreHorizontal, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MENU, type IconeMenu, type ItemMenu } from "@/lib/menu";
+import { menuDoPerfil, type IconeMenu, type ItemMenu } from "@/lib/menu";
+import { usePapel } from "./papel";
 import { usePreferencias } from "./preferencias";
 
 const ICONES: Record<IconeMenu, LucideIcon> = {
@@ -45,6 +46,7 @@ const itemAtivo = (item: ItemMenu, rota: Rota) =>
 
 function Lista({ rota, expandido }: { rota: Rota; expandido: boolean }) {
   const { setMenuAbertoMobile } = usePreferencias();
+  const MENU = menuDoPerfil(usePapel());
   const grupoAtivo = MENU.find((e) => "titulo" in e && e.sub && itemAtivo(e, rota));
   const [aberto, setAberto] = useState<string | null>(grupoAtivo && "titulo" in grupoAtivo ? grupoAtivo.titulo : null);
   const fecharMobile = () => setMenuAbertoMobile(false);
