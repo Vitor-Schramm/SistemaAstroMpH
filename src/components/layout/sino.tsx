@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
@@ -12,13 +13,15 @@ import type { Notificacao } from "@/lib/notificacoes/dados";
 
 export function Sino({ naoLidas, recentes }: { naoLidas: number; recentes: Notificacao[] }) {
   const router = useRouter();
+  const [aberto, setAberto] = useState(false);
   const abrir = async (n: Notificacao) => {
+    setAberto(false);
     await marcarLidas([n.id]);
     if (n.link) router.push(n.link);
     else router.refresh();
   };
   return (
-    <DropdownMenu>
+    <DropdownMenu open={aberto} onOpenChange={setAberto}>
       <DropdownMenuTrigger className="relative mr-[0.5rem] p-[0.5rem] outline-none" aria-label="Notificações">
         <Bell className="size-[1.5rem]" strokeWidth={1.75} />
         {naoLidas > 0 && (
@@ -46,7 +49,7 @@ export function Sino({ naoLidas, recentes }: { naoLidas: number; recentes: Notif
           ))}
         </div>
         <div className="p-[1.28rem]">
-          <Link href="/minha-conta/notificacoes" className="block w-full rounded-[0.358rem] bg-primary py-[0.6rem] text-center text-[1rem] text-white">
+          <Link href="/minha-conta/notificacoes" onClick={() => setAberto(false)} className="block w-full rounded-[0.358rem] bg-primary py-[0.6rem] text-center text-[1rem] text-white">
             Ver todas notificações
           </Link>
         </div>

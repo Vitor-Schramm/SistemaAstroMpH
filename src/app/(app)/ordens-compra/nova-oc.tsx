@@ -57,7 +57,7 @@ export function NovaOc({ obras, filiais, fornecedores, catalogo }: { obras: Opca
   const [linhas, setLinhas] = useState<Linha[]>([]);
   const [ativa, setAtiva] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const campo = (k: keyof DadosOcDireta) => ({ value: d[k], onChange: (e: { target: { value: string } }) => setD({ ...d, [k]: e.target.value }) });
+  const campo = (k: keyof DadosOcDireta) => ({ value: d[k], onChange: (e: { target: { value: string } }) => setD((x) => ({ ...x, [k]: e.target.value })) });
   const inserir = (l: Linha) =>
     setLinhas((ls) => {
       const i = ativa ? ls.findIndex((x) => x.chave === ativa) : -1;
@@ -94,7 +94,7 @@ export function NovaOc({ obras, filiais, fornecedores, catalogo }: { obras: Opca
       <div className="px-[1.5rem] pt-[1.5rem]">
         <div className="grid gap-x-[2rem] md:grid-cols-3">
           <Campo rotulo="Obra" htmlFor="n-obra">
-            <select id="n-obra" value={d.obra_id} onChange={(e) => setD({ ...d, obra_id: e.target.value, filial_cliente_id: "" })} className={selectClass}>
+            <select id="n-obra" value={d.obra_id} onChange={(e) => setD((x) => ({ ...x, obra_id: e.target.value, filial_cliente_id: "" }))} className={selectClass}>
               <option value="">Selecione uma Obra</option>
               {obras.map((o) => (
                 <option key={o.valor} value={o.valor}>

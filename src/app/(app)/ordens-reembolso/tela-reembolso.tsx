@@ -285,10 +285,10 @@ export function TelaReembolso({
   const apropriado = aprops.reduce((s, a) => s + a.valor, 0);
   const podeEfetivar = r != null && comApropriacao && Math.abs(apropriado - (r.valor_total ?? 0)) < 0.005;
 
-  const set = (k: keyof DadosReembolso) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setDados({ ...dados, [k]: e.target.value });
+  const set = (k: keyof DadosReembolso) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => setDados((x) => ({ ...x, [k]: e.target.value }));
   const mudarFornecedor = (id: string) => {
     const f = fornecedores.find((x) => x.valor === id);
-    setDados({ ...dados, fornecedor_id: id, ...(f ? { cpf_cnpj: f.cpf_cnpj, banco: f.banco, agencia: f.agencia, conta: f.conta } : {}) });
+    setDados((x) => ({ ...x, fornecedor_id: id, ...(f ? { cpf_cnpj: f.cpf_cnpj, banco: f.banco, agencia: f.agencia, conta: f.conta } : {}) }));
   };
   const mudar = (chave: string, p: Partial<Linha>) => setLinhas((ls) => ls.map((l) => (l.chave === chave ? { ...l, ...p } : l)));
 
@@ -330,7 +330,7 @@ export function TelaReembolso({
       <div className="px-[1.5rem] pt-[1.5rem]">
         <div className="grid gap-x-[2rem] md:grid-cols-3">
           <Campo rotulo="Obra" htmlFor="r-obra">
-            <select id="r-obra" disabled={!editavel} value={dados.obra_id} onChange={(e) => setDados({ ...dados, obra_id: e.target.value, filial_cliente_id: "" })} className={selectClass}>
+            <select id="r-obra" disabled={!editavel} value={dados.obra_id} onChange={(e) => setDados((x) => ({ ...x, obra_id: e.target.value, filial_cliente_id: "" }))} className={selectClass}>
               <option value="">Selecione uma Obra</option>
               {obras.map((o) => (
                 <option key={o.valor} value={o.valor}>
