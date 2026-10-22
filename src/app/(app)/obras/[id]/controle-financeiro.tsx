@@ -383,7 +383,9 @@ export function ControleFinanceiro({
 
   const totalPlanilha = (p: Planilha) => {
     const guia = p.modo === "guia";
-    const v = somar((ccsPlanilha.get(p.id) ?? []).filter((c) => !NIVEIS_TITULO.includes(c.nivel)).map((c) => valoresCc(c, guia)));
+    // Como no original, o total da planilha soma os CCs e também as linhas de Administração e Impostos.
+    const folhas = ccs.filter((c) => c.planilha_id === p.id && (c.nivel === "CC" || c.nivel === "ADM" || c.nivel === "I"));
+    const v = somar(folhas.map((c) => valoresCc(c, guia)));
     // Valor total ("TOT") informado nos percentuais substitui An. Financeira, Orçamento e Fechamento, como no original.
     const tot = percentuais.filter((x) => x.planilha_id === p.id && x.tipo === "tot").reduce((s, x) => s + Number(x.valor), 0);
     return tot ? { ...v, an: tot, orc: tot, fech: tot } : v;
