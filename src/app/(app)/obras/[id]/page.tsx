@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPerfil, podeEditarCadastros, podePagar } from "@/lib/auth";
 import { compararCodigo, type CentroCusto, type PagamentoCliente, type Percentual, type Planilha, type Responsavel } from "@/lib/obras/tipos";
 import { ControleFinanceiro, type ObraDados } from "./controle-financeiro";
+import type { ArquivoObra } from "./dialogos";
 
 export const metadata: Metadata = { title: "Controle Financeiro" };
 
@@ -14,7 +15,7 @@ export default async function ObraPage({ params }: PageProps<"/obras/[id]">) {
   if (!Number.isInteger(id)) notFound();
 
   const supabase = await createClient();
-  const [perfil, { data: obra }, planilhasR, { data: ccs }, { data: pagamentos }, { data: percentuais }, { data: responsaveis }, { data: filiais }, { data: perfis }, { data: clientes }] =
+  const [perfil, { data: obra }, planilhasR, { data: ccs }, { data: pagamentos }, { data: percentuais }, { data: responsaveis }, { data: filiais }, { data: perfis }, { data: clientes }, arquivosR] =
     await Promise.all([
       getPerfil(),
       supabase.from("obras").select("*").eq("id", id).maybeSingle(),
@@ -26,6 +27,7 @@ export default async function ObraPage({ params }: PageProps<"/obras/[id]">) {
       supabase.from("obra_filiais").select("cliente_id, cliente:clientes(nome)").eq("obra_id", id),
       supabase.from("perfis").select("id, nome, email").eq("ativo", true).order("nome"),
       supabase.from("clientes").select("id, nome").eq("ativo", true).order("nome"),
+      supabase.from("obra_arquivos").select("id, tipo, nome, enviado_em").eq("obra_id", id).order("enviado_em"),
     ]);
   if (!obra) notFound();
 
@@ -58,6 +60,7 @@ export default async function ObraPage({ params }: PageProps<"/obras/[id]">) {
       podeEstrutura={perfil.ativo && podeEditarCadastros(perfil.papel)}
       podeFinanceiro={perfil.ativo && podePagar(perfil.papel)}
       ehAdmin={perfil.ativo && perfil.papel === "admin"}
+      arquivos={arquivosR.error ? null : ((arquivosR.data ?? []) as ArquivoObra[])}
     />
   );
 }

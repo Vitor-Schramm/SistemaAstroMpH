@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { FileUp, Trash2 } from "lucide-react";
+import { Download, FileUp, Trash2 } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { linkArquivoObra, registrarArquivoObra } from "@/lib/obras/arquivos";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -753,18 +755,71 @@ export function CadernoNotas({ onFechar }: { onFechar: () => void }) {
 
 // ---------------------------------------------------------------- Arquivos (Relatório de Obra / Contratos)
 
-export function UploadArquivos({ rotulo, colunas, onFechar }: { rotulo?: string; colunas: string[]; onFechar: () => void }) {
+export type ArquivoObra = { id: number; tipo: "relatorio" | "contrato"; nome: string; enviado_em: string };
+
+export function UploadArquivos({
+  obraId,
+  tipo,
+  arquivos,
+  rotulo,
+  colunas,
+  onFechar,
+}: {
+  obraId: number;
+  tipo: "relatorio" | "contrato";
+  arquivos: ArquivoObra[] | null;
+  rotulo?: string;
+  colunas: string[];
+  onFechar: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const [enviando, setEnviando] = useState(false);
+  const lista = (arquivos ?? []).filter((a) => a.tipo === tipo);
+  const semMigracao = arquivos === null ? "Rode o arquivo 0019_obra_arquivos.sql no Supabase para enviar arquivos." : undefined;
+
+  const enviar = async () => {
+    const file = ref.current?.files?.[0];
+    if (!file) return void toast.error("Escolha um arquivo.");
+    setEnviando(true);
+    const caminho = `${obraId}/${tipo}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
+    const { error } = await createClient().storage.from("obra-arquivos").upload(caminho, file);
+    const r = error ? { ok: false as const, erro: error.message } : await registrarArquivoObra(obraId, tipo, caminho, file.name, file.size);
+    setEnviando(false);
+    if (!r.ok) return void toast.error(r.erro);
+    if (ref.current) ref.current.value = "";
+    toast.success("Arquivo enviado.");
+    router.refresh();
+  };
+  const baixar = async (id: number) => {
+    const r = await linkArquivoObra(id);
+    if (!r.ok || !r.url) return void toast.error(r.ok ? "Não foi possível gerar o link." : r.erro);
+    window.location.assign(r.url);
+  };
+
   return (
     <div>
       {rotulo && <h6 className="mb-[0.5rem] text-[1rem] font-medium">{rotulo}</h6>}
       <div className="flex gap-2">
-        <Input type="file" disabled title="Envio de arquivos da obra: próxima etapa" />
-        <Button disabled title="Envio de arquivos da obra: próxima etapa">
-          Adicionar
+        <Input ref={ref} type="file" disabled={!!semMigracao} title={semMigracao} />
+        <Button disabled={!!semMigracao || enviando} title={semMigracao} onClick={enviar}>
+          {enviando ? "Enviando…" : "Adicionar"}
         </Button>
       </div>
       <div className="mt-[1.5rem]">
-        <Tabela colunas={colunas} vazio />
+        <Tabela colunas={colunas} vazio={!lista.length}>
+          {lista.map((a) => (
+            <tr key={a.id}>
+              <td className={td}>{a.nome}</td>
+              <td className={td}>{fmtData(a.enviado_em)}</td>
+              <td className={td}>
+                <button type="button" title="Download" onClick={() => baixar(a.id)} className="p-1">
+                  <Download className="size-[14px]" />
+                </button>
+              </td>
+            </tr>
+          ))}
+        </Tabela>
       </div>
       <Rodape>
         <Voltar onFechar={onFechar} />

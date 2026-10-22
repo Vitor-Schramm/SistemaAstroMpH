@@ -25,6 +25,7 @@ import {
   Percentuais,
   Responsaveis,
   UploadArquivos,
+  type ArquivoObra,
 } from "./dialogos";
 
 // "Controle Financeiro" (obras/view) do AstroTools.
@@ -355,6 +356,7 @@ export function ControleFinanceiro({
   podeEstrutura,
   podeFinanceiro,
   ehAdmin,
+  arquivos,
 }: {
   obra: ObraDados;
   planilhas: Planilha[];
@@ -368,6 +370,8 @@ export function ControleFinanceiro({
   podeEstrutura: boolean;
   podeFinanceiro: boolean;
   ehAdmin: boolean;
+  /** null enquanto a migração 0019 não foi rodada. */
+  arquivos: ArquivoObra[] | null;
 }) {
   const router = useRouter();
   const [modal, setModal] = useState<Modal | null>(null);
@@ -578,8 +582,8 @@ export function ControleFinanceiro({
               {modal.tipo === "percentuais" && <Percentuais obraId={obra.id} planilhas={planilhas} percentuais={percentuais} podeEditar={podeEstrutura} onFechar={fechar} />}
               {modal.tipo === "importar" && <ImportarPlanilha obraId={obra.id} regime={obra.regime} onFechar={fechar} />}
               {modal.tipo === "caderno" && <CadernoNotas onFechar={fechar} />}
-              {modal.tipo === "relatorio" && <UploadArquivos rotulo="Arquivos:" colunas={["Arquivo", "Data Envio", ""]} onFechar={fechar} />}
-              {modal.tipo === "contrato" && <UploadArquivos colunas={["Arquivo", "Data", ""]} onFechar={fechar} />}
+              {modal.tipo === "relatorio" && <UploadArquivos obraId={obra.id} tipo="relatorio" arquivos={arquivos} rotulo="Arquivos:" colunas={["Arquivo", "Data Envio", ""]} onFechar={fechar} />}
+              {modal.tipo === "contrato" && <UploadArquivos obraId={obra.id} tipo="contrato" arquivos={arquivos} colunas={["Arquivo", "Data", ""]} onFechar={fechar} />}
               {modal.tipo === "alertas" && <ModalVazio colunas={["Nota", "Serie", "CC", "Descricao", "Valor Lançamento"]} />}
               {modal.tipo === "semana" && <ModalVazio colunas={["Nota", "Serie", "Data Pagamento", "Usuário", "Obra", "Pedido", "Fornecedor", "Valor", "CC"]} rodape="Total: 0,00" />}
               {modal.tipo === "editar" && <EditarPlanilha obra={obra} planilha={modal.planilha} onFechar={fechar} />}
