@@ -14,6 +14,13 @@ async function permitido() {
   return perfil.ativo && podeEditarCadastros(perfil.papel);
 }
 
+/** "1.234,5" ou "1234.5" → 1234.5 */
+const decimal = (v: string) => {
+  const t = String(v ?? "").trim();
+  const n = t.includes(",") ? Number(t.replace(/\./g, "").replace(",", ".")) : Number(t);
+  return Number.isFinite(n) && t !== "" ? n : null;
+};
+
 const limpar = (dados: Record<string, string>) => Object.fromEntries(Object.entries(dados).map(([k, v]) => [k, typeof v === "string" && v.trim() === "" ? null : v]));
 
 export async function salvarCliente(id: number | null, dados: Record<string, string>): Promise<Resultado> {
@@ -22,7 +29,7 @@ export async function salvarCliente(id: number | null, dados: Record<string, str
   if (faltando.length) return { ok: false, erro: "Preencha os campos obrigatórios: CNPJ, Razão Social, Nome Fantasia, Tipo Obra, Metragem, Arquitetura, Gerenciadora, Data Inicio e Data Fim." };
   const registro = {
     ...limpar(dados),
-    metragem: Number(String(dados.metragem).replace(/\./g, "").replace(",", ".")) || null,
+    metragem: decimal(dados.metragem),
     valida_engenharia_nota: dados.valida_engenharia_nota === "1",
     obriga_anexo_oc_nf: dados.obriga_anexo_oc_nf === "1",
   };

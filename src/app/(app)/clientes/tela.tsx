@@ -33,6 +33,7 @@ const paraDados = (c: Cliente | null): Dados =>
     CAMPOS.map((k) => {
       const v = c?.[k];
       if (k === "valida_engenharia_nota" || k === "obriga_anexo_oc_nf") return [k, v ? "1" : "0"];
+      if (k === "metragem" && v != null) return [k, Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 2 })];
       return [k, v == null ? "" : String(v)];
     }),
   ) as Dados;
