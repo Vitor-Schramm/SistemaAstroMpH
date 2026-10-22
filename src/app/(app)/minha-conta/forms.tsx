@@ -1,11 +1,11 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Cartao, Campo } from "@/components/astro/basicos";
 import { aplicarMascara } from "@/lib/format";
 import { salvarPerfil, trocarSenha, type ContaState } from "./actions";
 
@@ -19,78 +19,103 @@ function useAviso(state: ContaState, aoOk?: () => void) {
   }, [state]);
 }
 
-export function ContaForms({ nome, email, celular, papel }: { nome: string; email: string; celular: string; papel: string }) {
-  const [perfilState, perfilAction, perfilPending] = useActionState<ContaState, FormData>(salvarPerfil, {});
-  const [senhaState, senhaAction, senhaPending] = useActionState<ContaState, FormData>(trocarSenha, {});
+function CabecalhoCartao({ titulo }: { titulo: string }) {
+  return (
+    <div className="border-b border-[#ebe9f1] px-[1.5rem] py-[1.5rem] dark:border-[#3b4253]">
+      <h4 className="mb-0 text-[1.285rem] font-medium text-heading">{titulo}</h4>
+    </div>
+  );
+}
+
+function Botoes({ pending }: { pending: boolean }) {
+  return (
+    <div className="mt-[0.5rem] flex gap-[1rem]">
+      <Button type="submit" disabled={pending}>
+        Salvar
+      </Button>
+      <Button type="reset" variant="outline">
+        Cancelar
+      </Button>
+    </div>
+  );
+}
+
+export function FormPerfil({ nome, celular }: { nome: string; celular: string }) {
+  const [state, action, pending] = useActionState<ContaState, FormData>(salvarPerfil, {});
   const [cel, setCel] = useState(celular);
-  const senhaForm = useRef<HTMLFormElement>(null);
-  useAviso(perfilState);
-  useAviso(senhaState, () => senhaForm.current?.reset());
+  useAviso(state);
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Detalhes do perfil</CardTitle>
-          <CardDescription>
-            Perfil de acesso: <span className="capitalize">{papel}</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form action={perfilAction} className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-1.5 sm:col-span-2">
-              <Label htmlFor="nome">Nome</Label>
-              <Input id="nome" name="nome" defaultValue={nome} required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" value={email} disabled />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="celular">Celular</Label>
-              <Input
-                id="celular"
-                name="celular"
-                inputMode="numeric"
-                value={cel}
-                onChange={(e) => setCel(aplicarMascara(e.target.value, "telefone"))}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={perfilPending}>
-                {perfilPending ? "Salvando…" : "Salvar"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+    <Cartao>
+      <CabecalhoCartao titulo="Detalhes do Perfil" />
+      <form action={action} onReset={() => setCel(celular)} className="px-[1.5rem] pt-[2.5rem] pb-[1.5rem]">
+        <div className="w-full md:w-1/2">
+          <Campo rotulo="Nome" htmlFor="nome">
+            <Input id="nome" name="nome" defaultValue={nome} required />
+          </Campo>
+          <Campo rotulo="Celular" htmlFor="celular">
+            <Input
+              id="celular"
+              name="celular"
+              inputMode="numeric"
+              placeholder="Número de celular"
+              value={cel}
+              onChange={(e) => setCel(aplicarMascara(e.target.value, "telefone"))}
+            />
+          </Campo>
+        </div>
+        <Botoes pending={pending} />
+      </form>
+    </Cartao>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Alteração de senha</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form ref={senhaForm} action={senhaAction} className="grid gap-4 sm:grid-cols-3">
-            <div className="grid gap-1.5">
-              <Label htmlFor="atual">Senha atual</Label>
-              <Input id="atual" name="atual" type="password" autoComplete="current-password" required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="nova">Nova senha</Label>
-              <Input id="nova" name="nova" type="password" autoComplete="new-password" minLength={8} required />
-            </div>
-            <div className="grid gap-1.5">
-              <Label htmlFor="confirma">Confirme a nova senha</Label>
-              <Input id="confirma" name="confirma" type="password" autoComplete="new-password" minLength={8} required />
-            </div>
-            <div className="sm:col-span-3">
-              <Button type="submit" disabled={senhaPending}>
-                {senhaPending ? "Alterando…" : "Alterar senha"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
-    </>
+function CampoSenha({ id, name, placeholder, autoComplete }: { id: string; name: string; placeholder: string; autoComplete: string }) {
+  const [ver, setVer] = useState(false);
+  return (
+    <div className="flex">
+      <Input id={id} name={name} type={ver ? "text" : "password"} placeholder={placeholder} autoComplete={autoComplete} required className="rounded-r-none" />
+      <button
+        type="button"
+        onClick={() => setVer(!ver)}
+        aria-label={ver ? "Ocultar senha" : "Mostrar senha"}
+        className="flex w-[38px] shrink-0 items-center justify-center rounded-r-[0.357rem] border border-l-0 border-input text-foreground [&_svg]:size-[14px]"
+      >
+        {ver ? <EyeOff /> : <Eye />}
+      </button>
+    </div>
+  );
+}
+
+export function FormSenha() {
+  const [state, action, pending] = useActionState<ContaState, FormData>(trocarSenha, {});
+  const form = useRef<HTMLFormElement>(null);
+  useAviso(state, () => form.current?.reset());
+
+  return (
+    <Cartao>
+      <CabecalhoCartao titulo="Alteração de senha" />
+      <form ref={form} action={action} className="p-[1.5rem]">
+        <div className="grid gap-x-[1.5rem] md:grid-cols-2">
+          <Campo rotulo="Senha atual" htmlFor="atual">
+            <CampoSenha id="atual" name="atual" placeholder="Entre com sua senha atual" autoComplete="current-password" />
+          </Campo>
+          <div className="max-md:hidden" />
+          <Campo rotulo="Nova Senha" htmlFor="nova">
+            <CampoSenha id="nova" name="nova" placeholder="Digite a nova senha" autoComplete="new-password" />
+          </Campo>
+          <Campo rotulo="Confirme a nova senha" htmlFor="confirma">
+            <CampoSenha id="confirma" name="confirma" placeholder="Confirme sua nova senha" autoComplete="new-password" />
+          </Campo>
+        </div>
+        <p className="mb-[0.5rem] font-semibold text-heading">Recomendação de senha:</p>
+        <ul className="mb-[1rem] pl-[1rem] leading-[1.8]" style={{ listStyleType: "disc" }}>
+          <li>Mínimo de 8 caracteres entre letras e números</li>
+          <li>Ao menos uma letra maiúscula</li>
+          <li>Ao menos um número ou símbolo (caractere especial)</li>
+        </ul>
+        <Botoes pending={pending} />
+      </form>
+    </Cartao>
   );
 }
