@@ -18,15 +18,6 @@ function revalidar(extra: string[] = []) {
   for (const r of [...ROTAS_NF, ...extra]) revalidatePath(r);
 }
 
-export async function salvarNota(id: number | null, dados: Record<string, unknown>): Promise<Resultado> {
-  if (!dados.ordem_compra_id) return { ok: false, erro: "Selecione a ordem de compra." };
-  if (!dados.fase) return { ok: false, erro: "Selecione a fase." };
-  const { data, erro } = await rpc("salvar_nf", { p_id: id, p_dados: dados });
-  if (erro) return { ok: false, erro };
-  revalidar(id ? [`/notas/${id}`] : []);
-  return { ok: true, id: Number(data) };
-}
-
 export async function registrarAnexo(notaId: number, caminho: string, nome: string, tamanho: number): Promise<Resultado> {
   const supabase = await createClient();
   const { error } = await supabase.from("nf_anexos").insert({ nota_fiscal_id: notaId, caminho, nome, tamanho });
@@ -71,40 +62,5 @@ export async function pagarNota(id: number, data: string, forcar: boolean): Prom
     return { ok: false, erro };
   }
   revalidar([`/notas/${id}`]);
-  return { ok: true };
-}
-
-export async function estornarPagamento(id: number): Promise<Resultado> {
-  const { erro } = await rpc("estornar_pagamento", { p_id: id });
-  if (erro) return { ok: false, erro };
-  revalidar([`/notas/${id}`]);
-  return { ok: true };
-}
-
-export async function cancelarNota(id: number): Promise<Resultado> {
-  const { erro } = await rpc("cancelar_nf", { p_id: id });
-  if (erro) return { ok: false, erro };
-  revalidar([`/notas/${id}`]);
-  return { ok: true };
-}
-
-export async function lancarAporte(obraId: number, data: string, valor: number, descricao: string): Promise<Resultado> {
-  if (!obraId) return { ok: false, erro: "Selecione a obra." };
-  if (!valor) return { ok: false, erro: "Informe o valor (negativo para estorno)." };
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("obra_aportes")
-    .insert({ obra_id: obraId, data: data || undefined, valor, descricao: descricao || null });
-  if (error) return { ok: false, erro: error.code === "42501" ? "Só o financeiro lança aportes." : error.message };
-  revalidar();
-  return { ok: true };
-}
-
-export async function excluirAporte(id: number): Promise<Resultado> {
-  const supabase = await createClient();
-  const { error, count } = await supabase.from("obra_aportes").delete({ count: "exact" }).eq("id", id);
-  if (error) return { ok: false, erro: error.message };
-  if (!count) return { ok: false, erro: "Sem permissão para excluir este aporte." };
-  revalidar();
   return { ok: true };
 }

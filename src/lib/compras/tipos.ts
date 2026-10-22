@@ -39,18 +39,9 @@ export const STATUS_OC: Record<string, { rotulo: string; tom: Tom }> = {
   cancelada: { rotulo: "Cancelada", tom: "neutro" },
 };
 
-export const TIPOS_MAPA: Opcao[] = [
-  { valor: "compra", rotulo: "Compra" },
-  { valor: "locacao", rotulo: "Locação" },
-  { valor: "servico", rotulo: "Serviço" },
-];
-
 export type Tom = "ok" | "alerta" | "erro" | "info" | "neutro";
 
 export const numeroOC = (id: number) => `OC-${String(id).padStart(6, "0")}`;
-export const numeroSolicitacao = (id: number) => `SC-${String(id).padStart(6, "0")}`;
-export const numeroMapa = (id: number) => `MC-${String(id).padStart(6, "0")}`;
-
 export const num = (v: unknown) => {
   if (v === null || v === undefined || v === "") return 0;
   const n = Number(String(v).replace(",", "."));

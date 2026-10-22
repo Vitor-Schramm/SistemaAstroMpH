@@ -1,12 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ItemCatalogo, Opcao } from "./tipos";
 
-export async function opcoesObras(): Promise<Opcao[]> {
-  const supabase = await createClient();
-  const { data } = await supabase.from("obras").select("id, codigo, nome").eq("ativo", true).order("codigo");
-  return (data ?? []).map((o) => ({ valor: String(o.id), rotulo: `${o.codigo} — ${o.nome}` }));
-}
-
 export async function opcoesFornecedores(): Promise<(Opcao & { bloqueado: boolean })[]> {
   const supabase = await createClient();
   const { data } = await supabase
