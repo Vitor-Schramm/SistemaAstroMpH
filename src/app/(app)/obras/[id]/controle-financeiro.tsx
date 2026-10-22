@@ -411,7 +411,6 @@ export function ControleFinanceiro({
     URL.revokeObjectURL(url);
   };
 
-  const emBreve = (o: string) => toast.info(`${o}: disponível quando notas e pagamentos forem migrados para o novo modelo.`);
 
   return (
     <>
@@ -430,12 +429,12 @@ export function ControleFinanceiro({
               <DropdownMenuItem onClick={() => setModal({ tipo: "pagamentos" })}>Pagamentos Cliente</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setModal({ tipo: "filiais" })}>Filiais</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setModal({ tipo: "alertas" })}>Alertas Pagamentos</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => emBreve("Pagamentos")}>Pagamentos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(`/obras/${obra.id}/pagamentos`)}>Pagamentos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setModal({ tipo: "semana" })}>Pagamentos da Semana</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(`/guias-envio/obra/${obra.id}`)}>Guias Envio</DropdownMenuItem>
               <DropdownMenuItem onClick={() => router.push(`/guias-adm/obra/${obra.id}`)}>Guias Adm</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setModal({ tipo: "relatorio" })}>Relatório de Obra</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => emBreve("Controle Contratos")}>Controle Contratos</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push(`/obras/${obra.id}/controle-contratos?modo=P`)}>Controle Contratos</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setModal({ tipo: "caderno" })}>Caderno de Notas</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setModal({ tipo: "contrato" })}>Upload Contrato da Obra</DropdownMenuItem>
               {(podeEstrutura || ehAdmin) && <DropdownMenuSeparator />}
