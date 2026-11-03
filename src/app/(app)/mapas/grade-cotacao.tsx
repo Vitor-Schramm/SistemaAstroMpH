@@ -91,13 +91,16 @@ export function GradeCotacao({
         if (Number.isNaN(v)) return void toast.error(`Valor inválido em "${i.descricao}" / ${f.nome}.`);
         precosEnvio.push({ mapa_item_id: i.id, fornecedor_id: f.fornecedor_id, valor_unitario: v });
       }
+    for (const f of fornecedores)
+      for (const [k, rotulo] of [["frete", "Frete"], ["impostos", "Impostos"], ["desconto", "Desconto"]] as const)
+        if (Number.isNaN(lerNumero(forn[f.fornecedor_id][k]))) return void toast.error(`Valor inválido em "${rotulo}" / ${f.nome}.`);
     const fornEnvio = fornecedores.map((f) => {
       const x = forn[f.fornecedor_id];
       return {
         fornecedor_id: f.fornecedor_id,
-        frete: lerNumero(x.frete) || 0,
-        impostos: lerNumero(x.impostos) || 0,
-        desconto: lerNumero(x.desconto) || 0,
+        frete: lerNumero(x.frete),
+        impostos: lerNumero(x.impostos),
+        desconto: lerNumero(x.desconto),
         condicao_pagamento: x.condicao_pagamento,
         prazo_entrega: x.prazo_entrega,
         observacao: x.observacao,
@@ -162,6 +165,7 @@ export function GradeCotacao({
             <input
               value={forn[f.fornecedor_id]?.[k] ?? ""}
               onChange={(e) => setForn({ ...forn, [f.fornecedor_id]: { ...forn[f.fornecedor_id], [k]: e.target.value } })}
+              onFocus={(e) => e.target.select()}
               className={inputCls}
               inputMode="decimal"
               aria-label={`${rotulo} ${f.nome}`}
@@ -252,6 +256,7 @@ export function GradeCotacao({
                         <input
                           value={precos[chave(i.id, f.fornecedor_id)] ?? ""}
                           onChange={(e) => setPrecos({ ...precos, [chave(i.id, f.fornecedor_id)]: e.target.value })}
+                          onFocus={(e) => e.target.select()}
                           className={inputCls}
                           inputMode="decimal"
                           placeholder="0,00"
