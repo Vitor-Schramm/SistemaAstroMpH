@@ -674,7 +674,7 @@ export function TelaMapa({
               precos={precos}
               modo={modal === "cotacao" ? "total" : "parcial"}
               podeCotar={podeCotar}
-              editavel={cab.status === "cotacao" || cab.status === "aberto"}
+              editavel={(cab.status === "cotacao" || cab.status === "aberto") && !itens.some((i) => i.comPedido)}
               onFechar={() => setModal(null)}
               onPdf={() => window.open(`/imprimir/mapa/${cab.id}`, "_blank")}
             />
