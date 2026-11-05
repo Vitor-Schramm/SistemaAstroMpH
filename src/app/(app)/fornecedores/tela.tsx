@@ -12,6 +12,7 @@ import { Cartao, Campo, Selo } from "@/components/astro/basicos";
 import { TabelaDados, type ColunaTabela } from "@/components/astro/tabela-dados";
 import { selectClass } from "@/components/cadastros/registro-form";
 import { UFS } from "@/lib/cadastros/config";
+import { buscarCep, buscarCnpj, preencher } from "@/lib/busca-externa";
 import { cn } from "@/lib/utils";
 import { ativarFornecedor, salvarFornecedor } from "@/lib/cadastros/original";
 
@@ -84,12 +85,32 @@ export function TelaFornecedores({ fornecedores, busca, buscou, podeEditar }: { 
     },
   ];
 
-  const campo = (k: keyof Dados, rotulo: string) =>
+  const campo = (k: keyof Dados, rotulo: string, aoSair?: (valor: string) => void) =>
     edicao && (
       <Campo rotulo={rotulo} htmlFor={`fo-${k}`}>
-        <Input id={`fo-${k}`} value={edicao.dados[k]} onChange={(e) => setEdicao((x) => x && { ...x, dados: { ...x.dados, [k]: e.target.value } })} />
+        <Input
+          id={`fo-${k}`}
+          value={edicao.dados[k]}
+          onChange={(e) => setEdicao((x) => x && { ...x, dados: { ...x.dados, [k]: e.target.value } })}
+          onBlur={aoSair && ((e) => aoSair(e.target.value))}
+        />
       </Campo>
     );
+  // CNPJ (só pessoa jurídica) e CEP buscados na BrasilAPI e no ViaCEP ao sair do campo.
+  const completar = (novos: Partial<Dados>, soVazios: boolean) => setEdicao((x) => x && { ...x, dados: preencher(x.dados, novos, soVazios) });
+  const aoSairCnpj = async (v: string) => {
+    const e = await buscarCnpj(v);
+    if (e)
+      completar(
+        { nome: e.razao_social, nome_fantasia: e.nome_fantasia, cep: e.cep, endereco: e.endereco, numero: e.numero, complemento: e.complemento,
+          bairro: e.bairro, cidade: e.cidade, uf: e.uf, contato1_fone: e.telefone, contato1_email: e.email },
+        true,
+      );
+  };
+  const aoSairCep = async (v: string) => {
+    const e = await buscarCep(v);
+    if (e) completar({ endereco: e.endereco, bairro: e.bairro, cidade: e.cidade, uf: e.uf }, false);
+  };
 
   const buscar = (b: BuscaFornecedor) => {
     const p = new URLSearchParams({ buscar: "1", ...Object.fromEntries(Object.entries(b).filter(([, v]) => v)) });
@@ -159,7 +180,7 @@ export function TelaFornecedores({ fornecedores, busca, buscou, podeEditar }: { 
           {edicao && (
             <div>
               <div className="grid gap-x-[1.5rem] md:grid-cols-[2fr_4fr_3fr_3fr]">
-                {campo("cpf_cnpj", "CPF/CNPJ")}
+                {campo("cpf_cnpj", "CPF/CNPJ", aoSairCnpj)}
                 {campo("nome", "Nome")}
                 {campo("classificacao", "Classificação")}
                 <Campo rotulo="Avaliação do Fornecedor:">
@@ -185,7 +206,7 @@ export function TelaFornecedores({ fornecedores, busca, buscou, podeEditar }: { 
                 {campo("inscricao_municipal", "Inscrição Municipal")}
                 {campo("endereco", "Endereço")}
                 {campo("complemento", "Complemento")}
-                {campo("cep", "Cep")}
+                {campo("cep", "Cep", aoSairCep)}
                 {campo("numero", "Numero")}
                 {campo("bairro", "Bairro")}
                 {campo("cidade", "Cidade")}

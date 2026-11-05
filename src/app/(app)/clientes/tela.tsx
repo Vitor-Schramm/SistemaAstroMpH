@@ -12,6 +12,7 @@ import { Cartao, Campo, Selo } from "@/components/astro/basicos";
 import { TabelaDados, type ColunaTabela } from "@/components/astro/tabela-dados";
 import { selectClass } from "@/components/cadastros/registro-form";
 import { UFS } from "@/lib/cadastros/config";
+import { buscarCep, buscarCnpj, preencher } from "@/lib/busca-externa";
 import { data as fmtData, dataHora } from "@/lib/format";
 import { ativarCliente, salvarCliente } from "@/lib/cadastros/original";
 
@@ -110,12 +111,37 @@ export function TelaClientes({ clientes, inativos, podeEditar }: { clientes: Cli
     },
   ];
 
-  const campo = (k: keyof Dados, rotulo: string, tipo = "text") =>
+  const campo = (k: keyof Dados, rotulo: string, tipo = "text", aoSair?: (valor: string) => void) =>
     edicao && (
       <Campo rotulo={rotulo} htmlFor={`cl-${k}`}>
-        <Input id={`cl-${k}`} type={tipo} value={edicao.dados[k]} onChange={(e) => setEdicao((x) => x && { ...x, dados: { ...x.dados, [k]: e.target.value } })} />
+        <Input
+          id={`cl-${k}`}
+          type={tipo}
+          value={edicao.dados[k]}
+          onChange={(e) => setEdicao((x) => x && { ...x, dados: { ...x.dados, [k]: e.target.value } })}
+          onBlur={aoSair && ((e) => aoSair(e.target.value))}
+        />
       </Campo>
     );
+  // CNPJ e CEP buscados na BrasilAPI e no ViaCEP ao sair do campo.
+  const completar = (novos: Partial<Dados>, soVazios: boolean) => setEdicao((x) => x && { ...x, dados: preencher(x.dados, novos, soVazios) });
+  const aoSairCnpj = async (v: string) => {
+    const e = await buscarCnpj(v);
+    if (e)
+      completar(
+        { razao_social: e.razao_social, nome: e.nome_fantasia || e.razao_social, telefone: e.telefone, email: e.email, cep: e.cep, endereco: e.endereco, numero: e.numero,
+          complemento: e.complemento, bairro: e.bairro, cidade: e.cidade, uf: e.uf, codigo_municipio: e.codigo_municipio },
+        true,
+      );
+  };
+  const aoSairCep = async (v: string) => {
+    const e = await buscarCep(v);
+    if (e) completar({ endereco: e.endereco, bairro: e.bairro, cidade: e.cidade, uf: e.uf, codigo_municipio: e.codigo_municipio }, false);
+  };
+  const aoSairCepEntrega = async (v: string) => {
+    const e = await buscarCep(v);
+    if (e) completar({ endereco_entrega: e.endereco, bairro_entrega: e.bairro, cidade_entrega: e.cidade, uf_entrega: e.uf }, false);
+  };
   const selecao = (k: keyof Dados, rotulo: string, opcoes: { valor: string; rotulo: string }[]) =>
     edicao && (
       <Campo rotulo={rotulo} htmlFor={`cl-${k}`}>
@@ -153,7 +179,7 @@ export function TelaClientes({ clientes, inativos, podeEditar }: { clientes: Cli
           {edicao && (
             <div>
               <div className="grid gap-x-[1.5rem] md:grid-cols-3">
-                {campo("cnpj", "CNPJ")}
+                {campo("cnpj", "CNPJ", "text", aoSairCnpj)}
                 {campo("razao_social", "Razão Social")}
                 {campo("nome", "Nome Fantasia")}
                 {campo("ie", "IE")}
@@ -163,7 +189,7 @@ export function TelaClientes({ clientes, inativos, podeEditar }: { clientes: Cli
                 {campo("email", "E-Mail", "email")}
               </div>
               <div className="grid gap-x-[1.5rem] md:grid-cols-4">
-                {campo("cep", "CEP")}
+                {campo("cep", "CEP", "text", aoSairCep)}
                 {campo("endereco", "Endereço")}
                 {campo("complemento", "Complemento")}
                 {campo("numero", "Nº")}
@@ -174,7 +200,7 @@ export function TelaClientes({ clientes, inativos, podeEditar }: { clientes: Cli
               </div>
               <h6 className="mt-[0.5rem] mb-[0.8rem] text-[1rem] font-semibold">Endereço da Obra</h6>
               <div className="grid gap-x-[1.5rem] md:grid-cols-4">
-                {campo("cep_entrega", "CEP")}
+                {campo("cep_entrega", "CEP", "text", aoSairCepEntrega)}
                 {campo("endereco_entrega", "Endereço")}
                 {campo("complemento_entrega", "Complemento")}
                 {campo("contato_mestre", "Contato Mestre")}
