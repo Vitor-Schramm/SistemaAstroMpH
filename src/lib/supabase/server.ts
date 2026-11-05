@@ -1,8 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { SUPABASE_KEY, SUPABASE_URL } from "./env";
 
 export async function createClient() {
+  // Tudo que fala com o Supabase é por requisição: a sessão (getClaims) lê a hora atual.
+  await connection();
   const cookieStore = await cookies();
 
   return createServerClient(SUPABASE_URL, SUPABASE_KEY, {
