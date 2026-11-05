@@ -14,7 +14,7 @@ import {
 import { sair } from "@/app/login/actions";
 
 // Rótulos de perfil como aparecem no AstroTools ("Engenheiro", etc.).
-const PERFIS: Record<string, string> = {
+export const PERFIS: Record<string, string> = {
   admin: "Administrador",
   financeiro: "Financeiro",
   engenharia: "Engenheiro",

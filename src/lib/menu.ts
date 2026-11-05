@@ -73,6 +73,7 @@ export const MENU: EntradaMenu[] = [
     ],
   },
   { cabecalho: "RH" },
+  { titulo: "Usuários", href: "/usuarios", icone: "circle", papeis: ["admin"] },
 ];
 
 /** Item visível para o perfil. Enquanto o perfil não carregou, itens restritos ficam ocultos. */
